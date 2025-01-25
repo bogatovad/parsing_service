@@ -1,3 +1,4 @@
+from interface_adapters.controlles.exeptions import RunUsecaseException
 from interface_adapters.controlles.factory import UseCaseFactory
 
 
@@ -18,5 +19,5 @@ class GetContentController:
             print(f"{content_timepad=}")
             return True
         except Exception as e:
-            raise Exception(status_code=400, detail=str(e))
+            raise RunUsecaseException
 
