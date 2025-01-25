@@ -1,9 +1,11 @@
 from frameworks_and_drivers.gateways.nlp_gateway.nlp_processor_gateway import NLPProcessor
 from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway import KudaGoGateway
 from frameworks_and_drivers.gateways.parsing_gateway.tg_gateway import TelegramGateway
+from frameworks_and_drivers.gateways.parsing_gateway.timepad_gateway import TimepadGateway
 from frameworks_and_drivers.gateways.parsing_gateway.yandex_afisha_gateway import YandexAfishaGateway
 from usecases.kuda_go.kuda_go_usecase import GetContentKudaGoUseCase
 from usecases.telegram.get_content_tg_usecase import GetContentTgUseCase
+from usecases.timepad.timepad_usecase import GetContentTimepadUseCase
 from usecases.yandex_afisha.yandex_afisha_usecase import GetContentYandexAfishaUseCase
 from frameworks_and_drivers.repositories.content_repository import ContentRepositoryProtocol
 from frameworks_and_drivers.repositories.file_repository import FileRepositoryProtocol
@@ -32,6 +34,15 @@ class UseCaseFactory:
     def get_yandex_afisha_content_usecase() -> GetContentYandexAfishaUseCase:
         return GetContentYandexAfishaUseCase(
             gateway=YandexAfishaGateway(),
+            nlp_processor=NLPProcessor(),
+            content_repo=ContentRepositoryProtocol(),
+            file_repo=FileRepositoryProtocol()
+        )
+
+    @staticmethod
+    def get_timepad_content_usecase() -> GetContentYandexAfishaUseCase:
+        return GetContentTimepadUseCase(
+            gateway=TimepadGateway(),
             nlp_processor=NLPProcessor(),
             content_repo=ContentRepositoryProtocol(),
             file_repo=FileRepositoryProtocol()
