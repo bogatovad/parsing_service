@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #'data_manager',
+    'frameworks_and_drivers.django.parsing.data_manager',
     'django_celery_beat'
 ]
 
