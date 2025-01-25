@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: parsing_service_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parsing_service
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parsing_service_web
+    command: >
+      sh -c "python src/frameworks_and_drivers/django/parsing/manage.py migrate &&
+             python src/frameworks_and_drivers/django/parsing/manage.py collectstatic --noinput &&
+             python src/frameworks_and_drivers/django/parsing/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    image: web
+    depends_on:
+      - db
+    environment:
+      DJANGO_SETTINGS_MODULE: frameworks_and_drivers.django.parsing.parsing.settings
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parsing_service
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      PYTHONPATH: /app/src
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parsing_service_celery_worker
+    command: celery -A frameworks_and_drivers.django.parsing.celery_app worker --loglevel=debug
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      DJANGO_SETTINGS_MODULE: frameworks_and_drivers.django.parsing.parsing.settings
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parsing_service
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      PYTHONPATH: /app/src
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parsing_service_celery_beat
+    command: celery -A frameworks_and_drivers.django.parsing.celery_app beat --scheduler django_celery_beat.schedulers:DatabaseScheduler --loglevel=debug
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    environment:
+      DJANGO_SETTINGS_MODULE: frameworks_and_drivers.django.parsing.parsing.settings
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parsing_service
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      PYTHONPATH: /app/src
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
