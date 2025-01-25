@@ -32,6 +32,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
             datetime_obj = datetime.strptime(content.get('starts_at'), "%Y-%m-%dT%H:%M:%S%z")
             date_end = content.get('ends_at')
             date_end = datetime.strptime(date_end, "%Y-%m-%dT%H:%M:%S%z") if date_end else None
+            city = content.get('location').get("city")
             contents.append(
                 ContentPydanticSchema(
                     name=content.get('name'),
@@ -43,7 +44,8 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     date_end=date_end,
                     time=datetime_obj.strftime("%H:%M"),
                     location=content.get('location').get("address"),
-                    cost=min(prices)
+                    cost=min(prices),
+                    city=city
                 )
             )
         return contents

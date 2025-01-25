@@ -18,6 +18,7 @@ class ContentPydanticSchema(BaseModel):
     time: str
     location: str
     cost: int
+    city: str
 
     def __repr__(self):
         return f"ContentPydanticSchema(name={self.name}, description={self.description}, tags={self.tags}, " \

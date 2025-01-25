@@ -36,6 +36,7 @@ class Tags(GenericModel):
         return f"{self.name}"
 
 
+# todo: тут стоит предусмотреть город мероприятия.
 class Content(GenericModel):
     name = models.CharField(max_length=250)
     description = models.TextField()
