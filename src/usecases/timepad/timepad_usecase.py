@@ -14,34 +14,36 @@ class GetContentTimepadUseCase(AbstractUseCase):
         self.nlp_processor = nlp_processor
 
     def execute(self) -> list[ContentPydanticSchema]:
-        # todo: этим запросом мы тянем данные из тг. Это сырые данные.
+        # todo: этим запросом мы тянем данные из timepad. Это сырые данные.
         raw_content: list[dict] = self.gateway.fetch_content()
 
         # todo: Сырые данные поступают на вход nlp_processor.process которые отдает обработанные данные.
         processed_content = self.nlp_processor.process(raw_content)
 
-        # todo: тут должен быть код, который получает контент из телеграма.
+        # todo: тут должен быть код, который получает контент из timepad.
         # todo: и отдает его в list[ContentPydanticSchema].
         # todo: предварительно данные, полученные из тг должны быть обработаны с помошью nlp_processor.
         contents = []
 
         for content in raw_content:
-            tags = [item.get("name", "null") for item in content.get('categories', [])]
-            prices = [item.get("price") for item in content.get('cost', [{"price": 0}])]
+            tags = [item.get("name") for item in content.get('categories')]
+            prices = [item.get("price") for item in content.get('ticket_types')]
             contacts = {"link": content.get('url', {})}
+            datetime_obj = datetime.strptime(content.get('starts_at'), "%Y-%m-%dT%H:%M:%S%z")
+            date_end = content.get('ends_at')
+            date_end = datetime.strptime(date_end, "%Y-%m-%dT%H:%M:%S%z") if date_end else None
             contents.append(
                 ContentPydanticSchema(
-                    name=content.get('name', 'Default Name FROM TIMEPAD'),
-                    description=content.get('description_short', 'No description available'),
+                    name=content.get('name'),
+                    description=content.get('description_short'),
                     tags=tags,
                     image=content.get('image', b'data'),
                     contact=contacts,
-                    date_start=content.get('starts_at', datetime.now()),
-                    date_end=content.get('ends_at', datetime.now()),
-                    time=content.get('time', '00:00'),
-                    location=content.get('location', 'Unknown').get("address"),
+                    date_start=datetime.strptime(content.get('starts_at'), "%Y-%m-%dT%H:%M:%S%z"),
+                    date_end=date_end,
+                    time=datetime_obj.strftime("%H:%M"),
+                    location=content.get('location').get("address"),
                     cost=min(prices)
                 )
             )
-        print(f"{contents=}")
         return contents

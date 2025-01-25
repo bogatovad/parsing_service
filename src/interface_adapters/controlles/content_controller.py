@@ -15,6 +15,7 @@ class GetContentController:
             print(f"{content_tg=}")
             print(f"{content_yandex=}")
             print(f"{content_kuda_go=}")
+            print(f"{content_timepad=}")
             return True
         except Exception as e:
             raise Exception(status_code=400, detail=str(e))

@@ -14,7 +14,7 @@ class ContentPydanticSchema(BaseModel):
     image: bytes
     contact: Dict[str, str]
     date_start: datetime
-    date_end: datetime
+    date_end: datetime | None
     time: str
     location: str
     cost: int

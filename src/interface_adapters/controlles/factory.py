@@ -40,7 +40,7 @@ class UseCaseFactory:
         )
 
     @staticmethod
-    def get_timepad_content_usecase() -> GetContentYandexAfishaUseCase:
+    def get_timepad_content_usecase() -> GetContentTimepadUseCase:
         return GetContentTimepadUseCase(
             gateway=TimepadGateway(),
             nlp_processor=NLPProcessor(),
