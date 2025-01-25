@@ -11,6 +11,7 @@ class GetContentController:
             content_tg = self.usecase_factory.get_tg_content_usecase().execute()
             content_yandex = self.usecase_factory.get_yandex_afisha_content_usecase().execute()
             content_kuda_go = self.usecase_factory.get_kuda_go_content_usecase().execute()
+            content_timepad = self.usecase_factory.get_timepad_content_usecase().execute()
             print(f"{content_tg=}")
             print(f"{content_yandex=}")
             print(f"{content_kuda_go=}")
