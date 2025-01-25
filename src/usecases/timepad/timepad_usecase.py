@@ -15,8 +15,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
 
     def execute(self) -> list[ContentPydanticSchema]:
         # todo: этим запросом мы тянем данные из тг. Это сырые данные.
-        raw_content = self.gateway.fetch_content()
-        print(raw_content)
+        raw_content: list[dict] = self.gateway.fetch_content()
 
         # todo: Сырые данные поступают на вход nlp_processor.process которые отдает обработанные данные.
         processed_content = self.nlp_processor.process(raw_content)
@@ -24,16 +23,25 @@ class GetContentTimepadUseCase(AbstractUseCase):
         # todo: тут должен быть код, который получает контент из телеграма.
         # todo: и отдает его в list[ContentPydanticSchema].
         # todo: предварительно данные, полученные из тг должны быть обработаны с помошью nlp_processor.
-        content = ContentPydanticSchema(
-            name=processed_content.get('name', 'Default Name FROM YANDEX'),
-            description=processed_content.get('description', 'No description available'),
-            tags=processed_content.get('tags', []),
-            image=processed_content.get('image', b'data'),
-            contact=processed_content.get('contact', {}),
-            date_start=processed_content.get('date_start', datetime.now()),
-            date_end=processed_content.get('date_end', datetime.now()),
-            time=processed_content.get('time', '00:00'),
-            location=processed_content.get('location', 'Unknown'),
-            cost=processed_content.get('cost', 0)
-        )
-        return [content]
+        contents = []
+
+        for content in raw_content:
+            tags = [item.get("name", "null") for item in content.get('categories', [])]
+            prices = [item.get("price") for item in content.get('cost', [{"price": 0}])]
+            contacts = {"link": content.get('url', {})}
+            contents.append(
+                ContentPydanticSchema(
+                    name=content.get('name', 'Default Name FROM TIMEPAD'),
+                    description=content.get('description_short', 'No description available'),
+                    tags=tags,
+                    image=content.get('image', b'data'),
+                    contact=contacts,
+                    date_start=content.get('starts_at', datetime.now()),
+                    date_end=content.get('ends_at', datetime.now()),
+                    time=content.get('time', '00:00'),
+                    location=content.get('location', 'Unknown').get("address"),
+                    cost=min(prices)
+                )
+            )
+        print(f"{contents=}")
+        return contents

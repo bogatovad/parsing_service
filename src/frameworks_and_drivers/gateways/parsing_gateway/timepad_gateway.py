@@ -20,7 +20,7 @@ class TimepadGateway(BaseGateway):
         :return: Список событий в виде словарей.
         """
         params = {
-            "fields": "ticket_types,location",
+            "fields": "location,ticket_types,description_short,organization,ends_at",
             "cities": "Нижний Новгород",
             "starts_at_min": "2025-01-25",
             "sort": "starts_at"

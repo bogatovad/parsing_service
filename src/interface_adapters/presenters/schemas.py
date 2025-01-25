@@ -21,4 +21,5 @@ class ContentPydanticSchema(BaseModel):
 
     def __repr__(self):
         return f"ContentPydanticSchema(name={self.name}, description={self.description}, tags={self.tags}, " \
-               f"cost={self.cost})"
+               f"cost={self.cost}, date_start={self.date_start}, date_end={self.date_end}, time={self.time}, " \
+               f"loc={self.location}, contact={self.contact}"
