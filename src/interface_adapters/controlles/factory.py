@@ -5,6 +5,8 @@ from frameworks_and_drivers.gateways.parsing_gateway.yandex_afisha_gateway impor
 from usecases.kuda_go.kuda_go_usecase import GetContentKudaGoUseCase
 from usecases.telegram.get_content_tg_usecase import GetContentTgUseCase
 from usecases.yandex_afisha.yandex_afisha_usecase import GetContentYandexAfishaUseCase
+from frameworks_and_drivers.repositories.content_repository import ContentRepositoryProtocol
+from frameworks_and_drivers.repositories.file_repository import FileRepositoryProtocol
 
 
 class UseCaseFactory:
@@ -12,19 +14,25 @@ class UseCaseFactory:
     def get_tg_content_usecase() -> GetContentTgUseCase:
         return GetContentTgUseCase(
             gateway=TelegramGateway(),
-            nlp_processor=NLPProcessor()
+            nlp_processor=NLPProcessor(),
+            content_repo=ContentRepositoryProtocol(),
+            file_repo=FileRepositoryProtocol()
         )
 
     @staticmethod
     def get_kuda_go_content_usecase() -> GetContentKudaGoUseCase:
         return GetContentKudaGoUseCase(
             gateway=KudaGoGateway(),
-            nlp_processor=NLPProcessor()
+            nlp_processor=NLPProcessor(),
+            content_repo=ContentRepositoryProtocol(),
+            file_repo=FileRepositoryProtocol()
         )
 
     @staticmethod
     def get_yandex_afisha_content_usecase() -> GetContentYandexAfishaUseCase:
         return GetContentYandexAfishaUseCase(
             gateway=YandexAfishaGateway(),
-            nlp_processor=NLPProcessor()
+            nlp_processor=NLPProcessor(),
+            content_repo=ContentRepositoryProtocol(),
+            file_repo=FileRepositoryProtocol()
         )

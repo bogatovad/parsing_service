@@ -3,10 +3,13 @@ from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPP
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
 from datetime import datetime
+from interface_adapters.repositories.base_file_repository import FileRepositoryProtocol
+from interface_adapters.repositories.base_content_repository import ContentRepositoryProtocol
 
 
 class GetContentYandexAfishaUseCase(AbstractUseCase):
-    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase) -> None:
+    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase,
+                 content_repo: ContentRepositoryProtocol, file_repo: FileRepositoryProtocol) -> None:
         self.gateway = gateway
         self.nlp_processor = nlp_processor
 
@@ -24,7 +27,7 @@ class GetContentYandexAfishaUseCase(AbstractUseCase):
             name=processed_content.get('name', 'Default Name FROM YANDEX'),
             description=processed_content.get('description', 'No description available'),
             tags=processed_content.get('tags', []),
-            image=processed_content.get('image', b'gg'),
+            image=processed_content.get('image', b'data'),
             contact=processed_content.get('contact', {}),
             date_start=processed_content.get('date_start', datetime.now()),
             date_end=processed_content.get('date_end', datetime.now()),

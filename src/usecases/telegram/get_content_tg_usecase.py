@@ -3,10 +3,13 @@ from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPP
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
 from datetime import datetime
+from interface_adapters.repositories.base_file_repository import FileRepositoryProtocol
+from interface_adapters.repositories.base_content_repository import ContentRepositoryProtocol
 
 
 class GetContentTgUseCase(AbstractUseCase):
-    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase) -> None:
+    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase,
+                 content_repo: ContentRepositoryProtocol, file_repo: FileRepositoryProtocol) -> None:
         self.gateway = gateway
         self.nlp_processor = nlp_processor
 
@@ -32,6 +35,8 @@ class GetContentTgUseCase(AbstractUseCase):
             location=processed_content.get('location', 'Unknown'),
             cost=processed_content.get('cost', 0)
         )
+
+        # todo: тут идет вызов метода сохранения данных репозитория.
         return [content]
 
 # todo: это пример того, как собрать этот юзкейс и запустить.
