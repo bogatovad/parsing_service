@@ -2,6 +2,7 @@ from typing import List, Dict
 
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 import requests
+from datetime import datetime
 
 
 class TimepadGateway(BaseGateway):
@@ -19,18 +20,21 @@ class TimepadGateway(BaseGateway):
 
         :return: Список событий в виде словарей.
         """
+
+        current_date = datetime.now().date()
+        formatted_current_date = current_date.strftime("%Y-%m-%d")
+
         params = {
             "fields": "location,ticket_types,description_short,organization,ends_at",
             "cities": "Нижний Новгород",
-            "starts_at_min": "2025-01-25",
+            "starts_at_min": formatted_current_date,
             "sort": "starts_at"
         }
         headers = {
             "Authorization": "Bearer 23ee52ea2569153a9b1abcaa24682020aa2363ba"
         }
-        # todo: тут надо проверить, есть ли уже такие события в БД через event_ids_exclude
+        # todo: надо проверить, есть ли уже такие события в БД через event_ids_exclude
         api_url = "https://api.timepad.ru/v1/events"
         response = requests.get(api_url, params=params, headers=headers)
         response.raise_for_status()
-        events = response.json()["values"]
-        return events
+        return response.json()["values"]
