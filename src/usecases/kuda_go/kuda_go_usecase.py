@@ -1,28 +1,22 @@
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
 from datetime import datetime
 from interface_adapters.repositories.base_file_repository import FileRepositoryProtocol
 from interface_adapters.repositories.base_content_repository import ContentRepositoryProtocol
-
+from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway import KudaGoGateway
 
 class GetContentKudaGoUseCase(AbstractUseCase):
-    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase,
+    def __init__(self, gateway: BaseGateway,
                  content_repo: ContentRepositoryProtocol, file_repo: FileRepositoryProtocol) -> None:
         self.gateway = gateway
-        self.nlp_processor = nlp_processor
+        self.content_repo = content_repo
+        self.file_repo = file_repo
 
     def execute(self) -> list[ContentPydanticSchema]:
-        # todo: этим запросом мы тянем данные из тг. Это сырые данные.
         raw_content = self.gateway.fetch_content()
 
-        # todo: Сырые данные поступают на вход nlp_processor.process которые отдает обработанные данные.
-        processed_content = self.nlp_processor.process(raw_content)
-
-        # todo: тут должен быть код, который получает контент из телеграма.
-        # todo: и отдает его в list[ContentPydanticSchema].
-        # todo: предварительно данные, полученные из тг должны быть обработаны с помошью nlp_processor.
+        """
         content = ContentPydanticSchema(
             name=processed_content.get('name', 'Default Name FROM KUDA GO'),
             description=processed_content.get('description', 'No description available'),
@@ -35,4 +29,11 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             location=processed_content.get('location', 'Unknown'),
             cost=processed_content.get('cost', 0)
         )
-        return [content]
+        """
+        return raw_content
+
+gateway = KudaGoGateway(client={})
+kudago_content_usecase = GetContentKudaGoUseCase(gateway=gateway, content_repo = '', file_repo='')
+data = kudago_content_usecase.execute()
+#на 03.02.2025 52 события
+print(len(data))
