@@ -15,22 +15,25 @@ class GetContentKudaGoUseCase(AbstractUseCase):
 
     def execute(self) -> list[ContentPydanticSchema]:
         raw_content = self.gateway.fetch_content()
+        result = []
 
-        """
-        content = ContentPydanticSchema(
-            name=processed_content.get('name', 'Default Name FROM KUDA GO'),
-            description=processed_content.get('description', 'No description available'),
-            tags=processed_content.get('tags', []),
-            image=processed_content.get('image', b'gg'),
-            contact=processed_content.get('contact', {}),
-            date_start=processed_content.get('date_start', datetime.now()),
-            date_end=processed_content.get('date_end', datetime.now()),
-            time=processed_content.get('time', '00:00'),
-            location=processed_content.get('location', 'Unknown'),
-            cost=processed_content.get('cost', 0)
-        )
-        """
-        return raw_content
+        for element in raw_content:
+            content_element = ContentPydanticSchema(
+                name=element.get('name', 'Default Name FROM KUDA GO'),
+                description=element.get('description', 'No description available'),
+                tags=element.get('tags', []),
+                image=element.get('image', b'gg'),
+                #contact={"Ссылка: ": element.get('contact', {})},
+                contact={"Ссылка: " : element.get('url', {})},
+                date_start=element.get('date_start', datetime.now()),
+                date_end=element.get('date_end', datetime.now()),
+                time=element.get('time', '00:00'),
+                location=element.get('location', 'Unknown'),
+                cost=element.get('cost', 0),
+                city = element.get('city', '')
+            )
+            result.append(content_element)
+        return result
 
 gateway = KudaGoGateway(client={})
 kudago_content_usecase = GetContentKudaGoUseCase(gateway=gateway, content_repo = '', file_repo='')

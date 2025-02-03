@@ -1,6 +1,6 @@
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.presenters.schemas import ContentPydanticSchema
-import requests
+import requests, re
 from datetime import datetime
 import logging
 
@@ -59,18 +59,29 @@ class KudaGoGateway(BaseGateway):
         event = self._fetch_event_details(event["id"])
         event['place'] = "" if not 'place' in event.keys() else event['place']
 
+        #price - извлекаем первое число для простоты
+        #print(event['price'])
+        if event['price']:
+            if re.search('[0-9]{1-10}', event['price']):
+                event['price'] = re.findall(r'-?\d+(?:\.\d+)?', event['price'])[0]
+            else:
+                event['price'] = 0
+        else:
+            event['price'] = 0
+
         current_event = {
             "id": event.get("id", "-"),
             "name": event.get("title", "-"),
             "description": event.get("description", "-"),
             "tags": event.get("tags", []),
             "location": self._get_event_address(event),
-            "contact": event.get("place", {}).get("phone", "-") if event['place'] is not None else "-",
+            #"contact": event.get("place", {}).get("phone", "-") if event['place'] is not None else "-",
             "date_start": self._get_event_start_date(event),
             "date_end": event.get("dates", [{}])[0].get("end_date", ""),
-            "cost": event.get("price", ""),
+            "cost": event.get("price", "") if event['price'] is not None else 0, #дублируется возможно
             "url": "",
             "image": "",
+            "city" : "nnv"
         }
 
         if event:
