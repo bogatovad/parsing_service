@@ -23,7 +23,6 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 description=element.get('description', 'No description available'),
                 tags=element.get('tags', []),
                 image=element.get('image', b'gg'),
-                #contact={"Ссылка: ": element.get('contact', {})},
                 contact={"Ссылка: " : element.get('url', {})},
                 date_start=element.get('date_start', datetime.now()),
                 date_end=element.get('date_end', datetime.now()),
