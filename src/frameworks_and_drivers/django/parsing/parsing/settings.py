@@ -1,5 +1,4 @@
 from pathlib import Path
-from frameworks_and_drivers.django.parsing.data_manager.tasks import example_task
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,8 +25,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
     'frameworks_and_drivers.django.parsing.data_manager',
-    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -74,6 +73,19 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "HOST": "130.193.41.98",
+#         "PORT": "5532",
+#         "NAME": "afisha",
+#         "USER": "afisha",
+#         "PASSWORD": "password",
+#         "ATOMIC_REQUESTS": False,
+#         "DISABLE_SERVER_SIDE_CURSORS": True,  # required when using pgbouncer's pool_mode=transaction
+#     },
+# }
 
 
 # Password validation
@@ -127,6 +139,19 @@ CELERY_TIMEZONE = 'UTC'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin"
+MINIO_BUCKET_NAME = "afisha-files"
+MINIO_ENDPOINT = "http://130.193.41.98:9000"
+
+AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
+AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
+AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT
 
 
 CELERY_BEAT_SCHEDULE = {

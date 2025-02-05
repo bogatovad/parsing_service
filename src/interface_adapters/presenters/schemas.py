@@ -13,7 +13,7 @@ class ContentPydanticSchema(BaseModel):
     tags: List[str]
     image: bytes
     contact: Dict[str, str]
-    date_start: datetime
+    date_start: datetime | None
     date_end: datetime | None
     time: str
     location: str
