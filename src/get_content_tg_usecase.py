@@ -5,7 +5,6 @@ from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
 from datetime import datetime
 
-
 class GetContentTgUseCase(AbstractUseCase):
     def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase,
                  content_repo, file_repo) -> None:
