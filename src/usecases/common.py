@@ -12,6 +12,8 @@ class AbstractUseCase(ABC):
                  content_repo: ContentRepositoryProtocol, file_repo: FileRepositoryProtocol) -> None:
         self.gateway = gateway
         self.nlp_processor = nlp_processor
+        self.content_repo = content_repo
+        self.file_repo = file_repo
 
     @abstractmethod
     def execute(self, *args, **kwargs) -> Any:

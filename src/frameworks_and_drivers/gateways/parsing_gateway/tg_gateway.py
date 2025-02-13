@@ -41,25 +41,8 @@ def load_config(config_file: str = "telegram_config.json") -> dict:
         raise FileNotFoundError(f"Файл конфигурации '{config_file}' не найден.")
 
 
-def load_channels(filename: str = "channels.txt") -> List[str]:
-    """
-    Загружает список каналов из указанного текстового файла.
-    Каждый канал должен быть указан на отдельной строке.
-    """
-    channels = []
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            for line in f:
-                channel = line.strip()
-                if channel:
-                    channels.append(channel)
-    else:
-        logging.warning(f"Файл '{filename}' не найден.")
-    return channels
-
-
 class TelegramGateway(BaseGateway):
-    def __init__(self, state_file: str = "last_processed.json",
+    def __init__(self, client=None, state_file: str = "last_processed.json",
                  config_file: str = "telegram_config.json",
                  channels_file: str = "channels.txt") -> None:
         """
@@ -70,14 +53,12 @@ class TelegramGateway(BaseGateway):
          - Если клиент не авторизован, выбрасывает исключение (автоматизированный запуск не предполагает интерактивной авторизации).
          - Загружает состояние (последний обработанный message_id) из state_file.
         """
-        # Загружаем конфигурацию
-        config = load_config(config_file)
-        self.API_ID = config.get("API_ID")
-        self.API_HASH = config.get("API_HASH")
-        self.SESSION_NAME = config.get("SESSION_NAME")
 
-        # Загружаем список каналов
-        self.channels = load_channels(channels_file)
+        self.API_ID = 29534008
+        self.API_HASH = "7e0ecc08aefbd1039bc9929197e051d5"
+        self.SESSION_NAME = "tg_max_parser_1514_session"
+
+        self.channels = ["@checkapinow", "@Events_nn_best"]
         self.state_file = state_file
 
         # Создаем клиента Telethon и подключаемся
@@ -183,16 +164,3 @@ class TelegramGateway(BaseGateway):
                     })
         self._save_state()
         return events
-
-if __name__ == "__main__":
-    try:
-        gateway = TelegramGateway()
-        events = gateway.fetch_content()
-        if events:
-            print("Полученные новые сообщения:")
-            for event in events:
-                print(event)
-        else:
-            print("Новых сообщений не найдено.")
-    except Exception as e:
-        logging.error(f"Ошибка в работе TelegramGateway: {e}")

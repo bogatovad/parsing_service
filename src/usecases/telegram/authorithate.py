@@ -1,7 +1,5 @@
-# authorize.py
 from telethon.sync import TelegramClient
 from telethon.errors import SessionPasswordNeededError, AuthRestartError
-import json
 
 API_ID = 29534008
 API_HASH = "7e0ecc08aefbd1039bc9929197e051d5"

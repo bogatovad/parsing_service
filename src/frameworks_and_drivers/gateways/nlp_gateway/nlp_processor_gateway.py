@@ -1,6 +1,4 @@
-# nlp_processor.py
 import json
-import re
 import time
 import requests
 import yaml
@@ -11,21 +9,21 @@ from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPP
 
 logging.basicConfig(level=logging.INFO)
 
+
 class NLPProcessor(NLPProcessorBase):
-    def __init__(self, config_file: str = "nlp_config.json", prompt_file: str = "nlp_prompts.yaml") -> None:
+    def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
         """
         Инициализирует NLPProcessor.
         Загружает конфигурацию (ключи API, число попыток, интервалы) из JSON-файла,
         а также промпты из YAML-файла.
         """
-        with open(config_file, "r", encoding="utf-8") as f:
-            config = json.load(f)
-        self.thebai_api_url = config.get("THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions")
-        self.thebai_api_key = config.get("THEBAI_API_KEY", "your_thebai_api_key")
-        self.openrouter_api_url = config.get("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
-        self.openrouter_api_key = config.get("OPENROUTER_API_KEY", "your_openrouter_api_key")
-        self.attempts = config.get("attempts", 3)
-        self.attempt_interval = config.get("attempt_interval", 60)  # в секундах
+
+        self.thebai_api_url = os.getenv("THEBAI_API_URL", "https://api.thebai.ru/v1/chat/completions")
+        self.thebai_api_key = "sk-te5U1TN6yvTYFuB8Nc8FVGhlQi5BSQL7dkdAaPePqRXNf7Wu"
+        self.openrouter_api_url = "https://openrouter.ai/api/v1/chat/completions"
+        self.openrouter_api_key = "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"
+        self.attempts = 3
+        self.attempt_interval = 60
 
         with open(prompt_file, "r", encoding="utf-8") as f:
             self.prompt_config = yaml.safe_load(f)
@@ -49,11 +47,6 @@ class NLPProcessor(NLPProcessorBase):
                 return []
         except Exception as e:
             logging.error(f"Ошибка парсинга ответа: {e}")
-            try:
-                with open("unparsed_response.txt", "a", encoding="utf-8") as f:
-                    f.write(response_text + "\n\n")
-            except Exception as file_e:
-                logging.error(f"Ошибка сохранения некорректного ответа: {file_e}")
             return []
 
     def _call_api(self, prompt: str, service: str = "thebai") -> list:

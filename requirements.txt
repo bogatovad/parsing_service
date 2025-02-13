@@ -10,3 +10,5 @@ pillow
 requests
 django-storages
 boto3
+pyyaml
+Telethon
