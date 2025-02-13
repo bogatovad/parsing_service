@@ -86,7 +86,7 @@ class TelegramGateway(BaseGateway):
                     found_links = re.findall(r"(https?://\S+)", msg.message)
                     for url in found_links:
                         links.append(url)
-
+                print("Ссылки: ", links)
                 # Вместо того, чтобы возвращать ссылки отдельно, добавляем их в текст сообщения
                 full_text = msg.message
                 if links:
