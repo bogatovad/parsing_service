@@ -1,6 +1,5 @@
 from datetime import datetime
 from interface_adapters.presenters.schemas import ContentPydanticSchema
-from fixtures import mock_gateway, mock_nlp_processor, usecase
 
 
 def test_execute_returns_valid_content(mock_gateway, mock_nlp_processor, usecase):
@@ -9,16 +8,16 @@ def test_execute_returns_valid_content(mock_gateway, mock_nlp_processor, usecase
 
     # Настраиваем mock для nlp_processor
     mock_nlp_processor.process.return_value = {
-        'name': 'Dynamic Name',
-        'description': 'Dynamic Description',
-        'tags': ['dynamic_tag'],
-        'image': b'dynamic_image_data',
-        'contact': {'email': 'dynamic@example.com'},
-        'date_start': datetime(2023, 1, 1),
-        'date_end': datetime(2023, 1, 2),
-        'time': '18:00',
-        'location': 'Dynamic Location',
-        'cost': 200,
+        "name": "Dynamic Name",
+        "description": "Dynamic Description",
+        "tags": ["dynamic_tag"],
+        "image": b"dynamic_image_data",
+        "contact": {"email": "dynamic@example.com"},
+        "date_start": datetime(2023, 1, 1),
+        "date_end": datetime(2023, 1, 2),
+        "time": "18:00",
+        "location": "Dynamic Location",
+        "cost": 200,
     }
 
     # Выполняем usecase
@@ -46,13 +45,15 @@ def test_execute_returns_valid_content(mock_gateway, mock_nlp_processor, usecase
     assert isinstance(content.cost, (int, float))
 
 
-def test_execute_handles_missing_fields_gracefully(mock_gateway, mock_nlp_processor, usecase):
+def test_execute_handles_missing_fields_gracefully(
+    mock_gateway, mock_nlp_processor, usecase
+):
     # Настраиваем mock для gateway
     mock_gateway.fetch_content.return_value = "raw content"
 
     # Настраиваем mock для nlp_processor с неполным содержимым
     mock_nlp_processor.process.return_value = {
-        'name': 'Partial Name',
+        "name": "Partial Name",
         # Поля, которых нет, должны быть заменены значениями по умолчанию
     }
 
@@ -67,7 +68,7 @@ def test_execute_handles_missing_fields_gracefully(mock_gateway, mock_nlp_proces
     assert isinstance(content, ContentPydanticSchema)
 
     # Проверяем, что значения по умолчанию установлены
-    assert content.name == 'Partial Name'
+    assert content.name == "Partial Name"
     assert isinstance(content.description, str)  # Должно быть значение по умолчанию
     assert isinstance(content.tags, list)
     assert isinstance(content.image, bytes)

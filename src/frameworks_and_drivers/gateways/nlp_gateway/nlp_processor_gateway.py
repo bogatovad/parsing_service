@@ -5,7 +5,9 @@ import yaml
 import logging
 import os
 
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
+from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
+    NLPProcessorBase,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,10 +20,14 @@ class NLPProcessor(NLPProcessorBase):
         а также промпты из YAML-файла.
         """
 
-        self.thebai_api_url = os.getenv("THEBAI_API_URL", "https://api.thebai.ru/v1/chat/completions")
+        self.thebai_api_url = os.getenv(
+            "THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions"
+        )
         self.thebai_api_key = "sk-te5U1TN6yvTYFuB8Nc8FVGhlQi5BSQL7dkdAaPePqRXNf7Wu"
         self.openrouter_api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.openrouter_api_key = "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"
+        self.openrouter_api_key = (
+            "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"
+        )
         self.attempts = 3
         self.attempt_interval = 60
 
@@ -67,11 +73,11 @@ class NLPProcessor(NLPProcessorBase):
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "stream": False
+            "stream": False,
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         for attempt in range(1, self.attempts + 1):
@@ -86,7 +92,9 @@ class NLPProcessor(NLPProcessorBase):
             except requests.exceptions.RequestException as e:
                 logging.error(f"Ошибка запроса к {service} (попытка {attempt}): {e}")
                 if attempt < self.attempts:
-                    logging.info(f"Ожидание {self.attempt_interval} секунд перед повтором...")
+                    logging.info(
+                        f"Ожидание {self.attempt_interval} секунд перед повтором..."
+                    )
                     time.sleep(self.attempt_interval)
                 else:
                     logging.info(f"Не удалось получить ответ от {service}.")
@@ -120,7 +128,9 @@ class NLPProcessor(NLPProcessorBase):
         Использует шаблон category_prompt из YAML.
         Возвращает строку с категорией, полученную из API.
         """
-        category_prompt_template = self.prompt_config.get("category_prompt", "Определи категорию: {text}")
+        category_prompt_template = self.prompt_config.get(
+            "category_prompt", "Определи категорию: {text}"
+        )
         prompt = category_prompt_template.format(text=event_text)
         result_list = self._call_api(prompt, service="thebai")
         if result_list:
@@ -133,7 +143,9 @@ class NLPProcessor(NLPProcessorBase):
         Использует шаблон link_title_prompt из YAML.
         Возвращает сгенерированное название как строку.
         """
-        link_prompt_template = self.prompt_config.get("link_title_prompt", "Придумай название для ссылки: {text}")
+        link_prompt_template = self.prompt_config.get(
+            "link_title_prompt", "Придумай название для ссылки: {text}"
+        )
         prompt = link_prompt_template.format(text=event_text)
         result_list = self._call_api(prompt, service="thebai")
         if result_list:
@@ -160,7 +172,7 @@ class NLPProcessor(NLPProcessorBase):
         analysis_results = self.process(text)
         # Для каждого события добавляем данные изображения и остальные поля из исходного поста
         for event in analysis_results:
-            if 'image' not in event or event.get('image') is None:
-                event['image'] = image_data
+            if "image" not in event or event.get("image") is None:
+                event["image"] = image_data
             event.update(post_copy)
         return analysis_results

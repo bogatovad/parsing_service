@@ -31,5 +31,5 @@ class ContentPydanticSchema(BaseModel):
     class Config:
         json_encoders = {
             # Кодирует байтовые данные в base64, если они есть, иначе возвращает пустую строку.
-            bytes: lambda v: base64.b64encode(v).decode('utf-8') if v else ""
+            bytes: lambda v: base64.b64encode(v).decode("utf-8") if v else ""
         }

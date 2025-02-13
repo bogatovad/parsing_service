@@ -4,14 +4,16 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('data_manager', '0002_alter_content_options_rename_date_content_date_end_and_more'),
+        (
+            "data_manager",
+            "0002_alter_content_options_rename_date_content_date_end_and_more",
+        ),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='tags',
-            name='image',
+            model_name="tags",
+            name="image",
         ),
     ]

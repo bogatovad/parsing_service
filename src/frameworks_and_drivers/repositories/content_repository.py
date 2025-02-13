@@ -3,10 +3,14 @@ import io
 import uuid
 from django.core.files import File
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'frameworks_and_drivers.django.parsing.parsing.settings')
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE", "frameworks_and_drivers.django.parsing.parsing.settings"
+)
 from frameworks_and_drivers.django.parsing.data_manager.models import Content, Tags
 from interface_adapters.presenters.schemas import ContentPydanticSchema
-from interface_adapters.repositories.base_content_repository import ContentRepositoryProtocol
+from interface_adapters.repositories.base_content_repository import (
+    ContentRepositoryProtocol,
+)
 
 
 class ContentRepositoryProtocol(ContentRepositoryProtocol):
@@ -28,9 +32,11 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
                 cost=content.cost,
                 city=content.city,
             )
-            print(f'{content=}')
+            print(f"{content=}")
             buffer = io.BytesIO(content.image)
-            content_for_save.image.save(name=f'autopost{uuid.uuid4()}', content=File(buffer))
+            content_for_save.image.save(
+                name=f"autopost{uuid.uuid4()}", content=File(buffer)
+            )
             content_for_save.save()
             for tag in content.tags:
                 tag_for_save = Tags.objects.filter(name=tag).first()
@@ -42,4 +48,3 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
 
     def get_all_name_contents(self) -> list[str]:
         return list(Content.objects.values_list("name", flat=True))
-
