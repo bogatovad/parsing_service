@@ -1,18 +1,20 @@
-from typing import List
+from typing import List, Dict
 from pydantic import BaseModel
 from datetime import datetime
 import base64
 
+
 class ImagePydanticSchema(BaseModel):
     filename: str
+
 
 class ContentPydanticSchema(BaseModel):
     name: str
     description: str
     tags: List[str]
     image: bytes
-    contact: List[str]                # Изменили тип с Dict[str, str] на List[str]
-    date_start: datetime
+    contact: Dict[str, str]
+    date_start: datetime | None
     date_end: datetime | None
     time: str
     location: str

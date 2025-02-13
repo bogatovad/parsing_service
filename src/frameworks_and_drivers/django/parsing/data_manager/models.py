@@ -1,5 +1,13 @@
 from django.db import models
 
+CITY_CHOICES = [
+    ('spb', 'Санкт-Петербург'),
+    ('msk', 'Москва'),
+    ('ekb', 'Екатеринбург'),
+    ('nsk', 'Новосибирск'),
+    ('nn', 'Нижний Новгород')
+]
+
 
 class GenericModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -11,6 +19,11 @@ class GenericModel(models.Model):
 
 class User(GenericModel):
     username = models.CharField(max_length=250)
+    city = models.CharField(
+        max_length=50,
+        choices=CITY_CHOICES,
+        default='nn'
+    )
 
     def __str__(self):
         return f"{self.username}"
@@ -28,7 +41,6 @@ class MacroCategory(models.Model):
 class Tags(GenericModel):
     name = models.CharField(max_length=250, db_index=True)
     description = models.TextField()
-    image = models.ImageField(upload_to="images_tag", max_length=300)
     macro_category = models.ForeignKey(MacroCategory, on_delete=models.SET_NULL, related_name="tags", null=True,
                                        blank=True)
 
@@ -36,17 +48,22 @@ class Tags(GenericModel):
         return f"{self.name}"
 
 
-# todo: тут стоит предусмотреть город мероприятия.
 class Content(GenericModel):
     name = models.CharField(max_length=250)
     description = models.TextField()
     tags = models.ManyToManyField(Tags, related_name='contents')
-    image = models.ImageField(upload_to="images", max_length=300)
+    image = models.ImageField(upload_to="images", max_length=300, null=True, blank=True)
     contact = models.JSONField(default={}, null=True, blank=True)
-    date = models.DateField(null=True, blank=True)
+    date_start = models.DateField(null=True, blank=True)
+    date_end = models.DateField(null=True, blank=True)
     time = models.CharField(max_length=250, null=True, blank=True, default=None)
     location = models.CharField(max_length=250, null=True, blank=True, default=None)
     cost = models.IntegerField(null=True, blank=True, default=None)
+    city = models.CharField(
+        max_length=50,
+        choices=CITY_CHOICES,
+        default='nn'
+    )
 
     def get_tags(self):
         return "\n".join([t.name for t in self.tags.all()])
@@ -55,7 +72,7 @@ class Content(GenericModel):
         return f"{self.name}"
 
     class Meta:
-        ordering = ["date"]
+        ordering = ["date_start"]
 
 
 class Like(GenericModel):
