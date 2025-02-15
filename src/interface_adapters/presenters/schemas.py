@@ -25,7 +25,7 @@ class ContentPydanticSchema(BaseModel):
         return (
             f"ContentPydanticSchema(name={self.name}, description={self.description}, tags={self.tags}, "
             f"cost={self.cost}, date_start={self.date_start}, date_end={self.date_end}, time={self.time}, "
-            f"location={self.location}, contact={self.contact}, links={self.links})"
+            f"location={self.location}, contact={self.contact})"
         )
 
     class Config:

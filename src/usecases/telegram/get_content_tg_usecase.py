@@ -41,8 +41,15 @@ class GetContentTgUseCase(AbstractUseCase):
             print("[ВЫПОЛНЕНИЕ] Новых сообщений не найдено, возвращаем пустой список")
             return []
 
+        exists_content = self.content_repo.get_all_name_contents()
+        raw_filter_content = [
+            content
+            for content in raw_contents
+            if content.get("name") not in exists_content
+        ]
+
         results = []
-        for i, raw in enumerate(raw_contents):
+        for i, raw in enumerate(raw_filter_content):
             print(f"[ОБРАБОТКА] Обрабатываем сообщение {i + 1}/{len(raw_contents)}")
             # Получаем результат обработки: может быть словарём (одно событие) или списком словарей (несколько событий)
             processed_result = self.nlp_processor.process_post(raw)
@@ -88,6 +95,7 @@ class GetContentTgUseCase(AbstractUseCase):
         print(
             f"[ВЫПОЛНЕНИЕ] Обработка завершена. Всего обработано сообщений: {len(results)}"
         )
+        self.content_repo.save_content(results)
         return results
 
     def _create_schema_from_event(self, event: dict) -> ContentPydanticSchema | None:
@@ -98,6 +106,10 @@ class GetContentTgUseCase(AbstractUseCase):
             if not isinstance(contact, list):
                 contact = [contact]
 
+            # todo: тут надо поправить и сделать по-нормальному
+            contact_list_dict = {
+                f"ссылка_{index}": _contact for index, _contact in enumerate(contact)
+            }
             # Нормализуем поле cost: если оно пустое или не может быть приведено к int, устанавливаем 0.
             cost_raw = event.get("cost", 0)
             try:
@@ -111,7 +123,7 @@ class GetContentTgUseCase(AbstractUseCase):
                 description=event.get("description", "No description available"),
                 tags=event.get("tags", []),
                 image=event.get("image") or b"",
-                contact=contact,
+                contact=contact_list_dict,
                 date_start=event.get("data_start", datetime.now()),
                 date_end=event.get("data_end", datetime.now()),
                 time=event.get("time", "00:00"),
