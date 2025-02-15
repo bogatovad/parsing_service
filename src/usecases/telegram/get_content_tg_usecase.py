@@ -35,7 +35,7 @@ class GetContentTgUseCase(AbstractUseCase):
         """
         print("[ВЫПОЛНЕНИЕ] Получаем данные из gateway...")
         raw_contents = self.gateway.fetch_content()
-        print(f"[ВЫПОЛНЕНИЕ] Получено сырых сообщений: {len(raw_contents)}")
+        print(f"[ВЫПОЛНЕНИЕ] Получено сырых сообщений: {raw_contents}")
 
         if not raw_contents:
             print("[ВЫПОЛНЕНИЕ] Новых сообщений не найдено, возвращаем пустой список")
