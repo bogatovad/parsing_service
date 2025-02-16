@@ -20,7 +20,7 @@ class TelegramGateway(BaseGateway):
             "FeqdeNspIt0duhjs_CUD3PaQU3cQxTZGbWwWhtkZ_zAtHiLqpGyOfik3Cx8bmNefafMGuzhqAVk18uWu4u7wl3WEnLo9kCLH9e"
             "MuMEVgeDnUhfOpFKfplamZ509-awPQN7Ad0T7SvWMZ7wblXlOpNUqy1g8KS04lTl2he9ri_Ma0c="
         )
-        self.channels = ["@Events_nn_best"]
+        self.channels = [("@Events_nn_best", "nn")]
         self.client = TelegramClient(
             StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
         )
@@ -37,8 +37,14 @@ class TelegramGateway(BaseGateway):
         if msg.entities:
             for entity in msg.entities:
                 if isinstance(entity, (MessageEntityUrl, MessageEntityTextUrl)):
-                    if entity.url.find("https://t.me") == -1:
-                        links.append(entity.url)
+                    url = (
+                        entity.url
+                        if hasattr(entity, "url") and entity.url
+                        else msg.message[entity.offset : entity.offset + entity.length]
+                    )
+                    if url.find("https://t.me") != -1:
+                        continue
+                    links.append(url)
         return links
 
     def get_image_bytes(self, msg) -> bytes:
@@ -58,9 +64,9 @@ class TelegramGateway(BaseGateway):
         Получает сообщения из указанных каналов.
         """
         events = []
-        for channel in self.channels:
+        for channel, city in self.channels:
             logging.info(f"processing {channel}")
-            messages = self.client.get_messages(channel, limit=10)
+            messages = self.client.get_messages(channel, limit=50)
             logging.info("messages have been received.")
             for msg in messages:
                 if msg.message:
@@ -69,12 +75,13 @@ class TelegramGateway(BaseGateway):
                     logging.info("links has been got.")
                     events.append(
                         {
-                            "event_id": msg.id,
+                            "event_id": str(msg.id),
                             "channel": channel,
-                            "text": msg.message,
+                            "text": msg.message + "\n".join(links),
                             "links": links,
                             "date": msg.date.isoformat() if msg.date else None,
-                            # "image": image_bytes,
+                            "city": city,
+                            "image": image_bytes,
                         }
                     )
                     logging.info("events has been processed.")

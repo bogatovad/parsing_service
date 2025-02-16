@@ -1,4 +1,3 @@
-from typing import List, Dict
 from pydantic import BaseModel
 from datetime import datetime
 import base64
@@ -11,15 +10,16 @@ class ImagePydanticSchema(BaseModel):
 class ContentPydanticSchema(BaseModel):
     name: str
     description: str
-    tags: List[str]
+    tags: list[str]
     image: bytes
-    contact: Dict[str, str]
+    contact: list[dict[str, str]]
     date_start: datetime | None
     date_end: datetime | None
     time: str
     location: str
     cost: int
     city: str
+    unique_id: str
 
     def __repr__(self):
         return (

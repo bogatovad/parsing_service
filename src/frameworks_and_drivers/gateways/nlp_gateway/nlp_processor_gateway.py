@@ -1,5 +1,4 @@
 import json
-import time
 import requests
 import yaml
 import logging
@@ -28,8 +27,8 @@ class NLPProcessor(NLPProcessorBase):
         self.openrouter_api_key = (
             "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"
         )
-        self.attempts = 3
         self.attempt_interval = 60
+        self.max_retries = 3
 
         with open(prompt_file, "r", encoding="utf-8") as f:
             self.prompt_config = yaml.safe_load(f)
@@ -45,6 +44,7 @@ class NLPProcessor(NLPProcessorBase):
             return []
         try:
             parsed = json.loads(response_text)
+            print(f"{parsed=}")
             if isinstance(parsed, list):
                 return parsed
             elif isinstance(parsed, dict):
@@ -55,21 +55,8 @@ class NLPProcessor(NLPProcessorBase):
             logging.error(f"Ошибка парсинга ответа: {e}")
             return []
 
-    def _call_api(self, prompt: str, service: str = "thebai") -> list:
-        """
-        Унифицированный метод для вызова внешнего API с несколькими попытками.
-        Если service == "thebai", обращается к основному сервису, иначе – к openrouter.
-        Возвращает список словарей, полученных из API.
-        """
-        if service == "thebai":
-            url = self.thebai_api_url
-            api_key = self.thebai_api_key
-            model = "theb-ai-4"
-        else:
-            url = self.openrouter_api_url
-            api_key = self.openrouter_api_key
-            model = "anthropic/claude-3.5-sonnet"
-
+    def _send_request(self, url, api_key, model, prompt):
+        """Отправляет запрос к API и обрабатывает ответ."""
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -80,35 +67,39 @@ class NLPProcessor(NLPProcessorBase):
             "Content-Type": "application/json",
         }
 
-        for attempt in range(1, self.attempts + 1):
-            try:
-                logging.info(f"Попытка {attempt}: отправляем запрос к {service}.")
-                response = requests.post(url, headers=headers, data=json.dumps(payload))
-                response.raise_for_status()
-                response_data = response.json()
-                content = response_data["choices"][0]["message"]["content"]
-                logging.info(f"Ответ от {service}: {content}")
-                return self._parse_response(content)
-            except requests.exceptions.RequestException as e:
-                logging.error(f"Ошибка запроса к {service} (попытка {attempt}): {e}")
-                if attempt < self.attempts:
-                    logging.info(
-                        f"Ожидание {self.attempt_interval} секунд перед повтором..."
-                    )
-                    time.sleep(self.attempt_interval)
-                else:
-                    logging.info(f"Не удалось получить ответ от {service}.")
-                    break
-            except Exception as e:
-                logging.error(f"Непредвиденная ошибка при вызове {service}: {e}")
-                break
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response.raise_for_status()
+            response_data = response.json()
+            choices = response_data.get("choices", [])
 
+            if not choices:
+                logging.warning("API вернул пустой список choices.")
+                return []
+
+            return self._parse_response(choices[0]["message"]["content"])
+        except:  # noqa: E722
+            return []
+
+    def _call_api(self, prompt: str, service: str = "thebai") -> list:
+        """
+        Унифицированный метод для вызова внешнего API с несколькими попытками.
+        Если service == "thebai", обращается к основному сервису, иначе – к openrouter.
+        Возвращает список словарей, полученных из API.
+        """
         if service == "thebai":
-            logging.info("Переключение на сервис OpenRouter.")
-            return self._call_api(prompt, service="openrouter")
-        return []
+            url, api_key, model = self.thebai_api_url, self.thebai_api_key, "theb-ai-4"
+        else:
+            url, api_key, model = (
+                self.openrouter_api_url,
+                self.openrouter_api_key,
+                "anthropic/claude-3.5-sonnet",
+            )
 
-    def process(self, text: str) -> list:
+        result = self._send_request(url, api_key, model, prompt)
+        return result
+
+    def process(self, text: str) -> dict:
         """
         Основной метод обработки текста.
         Использует промпт main_prompt из YAML, подставляет в него текст и вызывает _call_api.
@@ -116,7 +107,7 @@ class NLPProcessor(NLPProcessorBase):
         Возвращает список словарей, где каждый словарь описывает отдельное событие.
         """
         main_prompt_template = self.prompt_config.get("main_prompt", "")
-        prompt = main_prompt_template.format(text=text)
+        prompt = main_prompt_template.replace("{text}", text)
         result_list = self._call_api(prompt, service="thebai")
         if isinstance(result_list, list):
             return result_list
@@ -159,20 +150,18 @@ class NLPProcessor(NLPProcessorBase):
         Предполагается, что в посте есть ключ "text" для основного текста и (опционально) ключ "image" с байтами изображения.
         Возвращает список словарей – по одному на каждое событие, обнаруженное нейронкой.
         """
-        # Копируем исходный пост, чтобы не изменять оригинал
         post_copy = post.copy()
-        # Извлекаем поле с изображением (оно может быть очень большим) и удаляем его из данных для нейронки
         image_data = post_copy.pop("image", None)
-        # Получаем текст для анализа (например, по ключу "text")
         text = post_copy.get("text", "")
         if not text:
             logging.info("Пост не содержит текста – пропускаем обработку.")
             return []
-        # Вызываем анализ текста; ожидаем, что вернется список событий (словарей)
+
         analysis_results = self.process(text)
-        # Для каждого события добавляем данные изображения и остальные поля из исходного поста
+
         for event in analysis_results:
             if "image" not in event or event.get("image") is None:
                 event["image"] = image_data
             event.update(post_copy)
+
         return analysis_results
