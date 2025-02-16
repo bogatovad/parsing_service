@@ -4,39 +4,60 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('data_manager', '0001_initial'),
+        ("data_manager", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='content',
-            options={'ordering': ['date_start']},
+            name="content",
+            options={"ordering": ["date_start"]},
         ),
         migrations.RenameField(
-            model_name='content',
-            old_name='date',
-            new_name='date_end',
+            model_name="content",
+            old_name="date",
+            new_name="date_end",
         ),
         migrations.AddField(
-            model_name='content',
-            name='city',
-            field=models.CharField(choices=[('spb', 'Санкт-Петербург'), ('msk', 'Москва'), ('ekb', 'Екатеринбург'), ('nsk', 'Новосибирск'), ('nn', 'Нижний Новгород')], default='nn', max_length=50),
+            model_name="content",
+            name="city",
+            field=models.CharField(
+                choices=[
+                    ("spb", "Санкт-Петербург"),
+                    ("msk", "Москва"),
+                    ("ekb", "Екатеринбург"),
+                    ("nsk", "Новосибирск"),
+                    ("nn", "Нижний Новгород"),
+                ],
+                default="nn",
+                max_length=50,
+            ),
         ),
         migrations.AddField(
-            model_name='content',
-            name='date_start',
+            model_name="content",
+            name="date_start",
             field=models.DateField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='user',
-            name='city',
-            field=models.CharField(choices=[('spb', 'Санкт-Петербург'), ('msk', 'Москва'), ('ekb', 'Екатеринбург'), ('nsk', 'Новосибирск'), ('nn', 'Нижний Новгород')], default='nn', max_length=50),
+            model_name="user",
+            name="city",
+            field=models.CharField(
+                choices=[
+                    ("spb", "Санкт-Петербург"),
+                    ("msk", "Москва"),
+                    ("ekb", "Екатеринбург"),
+                    ("nsk", "Новосибирск"),
+                    ("nn", "Нижний Новгород"),
+                ],
+                default="nn",
+                max_length=50,
+            ),
         ),
         migrations.AlterField(
-            model_name='content',
-            name='image',
-            field=models.ImageField(blank=True, max_length=300, null=True, upload_to='images'),
+            model_name="content",
+            name="image",
+            field=models.ImageField(
+                blank=True, max_length=300, null=True, upload_to="images"
+            ),
         ),
     ]

@@ -17,7 +17,7 @@ services:
       dockerfile: Dockerfile
     command: >
       sh -c "python src/frameworks_and_drivers/django/parsing/manage.py migrate &&
-             python src/frameworks_and_drivers/django/parsing/manage.py collectstatic --noinput && 
+             python src/frameworks_and_drivers/django/parsing/manage.py collectstatic --noinput &&
              python src/frameworks_and_drivers/django/parsing/manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
@@ -30,6 +30,7 @@ services:
       - environments/db.env
       - environments/web.env
       - environments/minio.env
+      - environments/tg.env
 
   celery-worker-parsing:
     build:

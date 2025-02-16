@@ -1,6 +1,6 @@
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-from interface_adapters.presenters.schemas import ContentPydanticSchema
-import requests, re
+import requests
+import re
 from datetime import datetime
 import logging
 
@@ -8,15 +8,11 @@ import logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("kudago_gateway.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler("kudago_gateway.log"), logging.StreamHandler()],
 )
 
 
 class KudaGoGateway(BaseGateway):
-
     BASE_URL = "https://kudago.com/public-api/v1.4"
     DATE_FORMAT = "%Y-%m-%d"
     DATETIME_FORMAT = "%d.%m.%Y %H:%M"
@@ -35,7 +31,6 @@ class KudaGoGateway(BaseGateway):
         logging.info("KudaGoGateway инициализирован")
         self.client = client
 
-
     def _fetch_event_details(self, event_id: int) -> dict | None:
         """
         Получает детали события по его ID.
@@ -49,25 +44,22 @@ class KudaGoGateway(BaseGateway):
             logging.error(f"Ошибка при запросе деталей события {event_id}: {e}")
             return None
 
-
     def _parse_event(self, event: dict) -> dict:
         """
         Парсит событие и возвращает его в формате, удобном для использования.
         """
-        id = event['id']
-
         event = self._fetch_event_details(event["id"])
-        event['place'] = "" if not 'place' in event.keys() else event['place']
+        event["place"] = "" if "place" not in event.keys() else event["place"]
 
-        #price - извлекаем первое число для простоты
-        #print(event['price'])
-        if event['price']:
-            if re.search('[0-9]{1-10}', event['price']):
-                event['price'] = re.findall(r'-?\d+(?:\.\d+)?', event['price'])[0]
+        # price - извлекаем первое число для простоты
+        # print(event['price'])
+        if event["price"]:
+            if re.search("[0-9]{1-10}", event["price"]):
+                event["price"] = re.findall(r"-?\d+(?:\.\d+)?", event["price"])[0]
             else:
-                event['price'] = 0
+                event["price"] = 0
         else:
-            event['price'] = 0
+            event["price"] = 0
 
         current_event = {
             "id": event.get("id", "-"),
@@ -75,20 +67,21 @@ class KudaGoGateway(BaseGateway):
             "description": event.get("description", "-"),
             "tags": event.get("tags", []),
             "location": self._get_event_address(event),
-            #"contact": event.get("place", {}).get("phone", "-") if event['place'] is not None else "-",
+            # "contact": event.get("place", {}).get("phone", "-") if event['place'] is not None else "-",
             "date_start": self._get_event_start_date(event),
             "date_end": event.get("dates", [{}])[0].get("end_date", ""),
-            "cost": event.get("price", "") if event['price'] is not None else 0, #дублируется возможно
+            "cost": event.get("price", "")
+            if event["price"] is not None
+            else 0,  # дублируется возможно
             "url": "",
             "image": "",
-            "city" : "nnv"
+            "city": "nnv",
         }
 
         if event:
             current_event.update(self._parse_event_details(event))
 
         return current_event
-
 
     def _parse_event_details(self, event_details: dict) -> dict:
         """
@@ -105,7 +98,6 @@ class KudaGoGateway(BaseGateway):
 
         return parsed_details
 
-
     def _get_event_address(self, event: dict) -> str:
         """
         Возвращает адрес события.
@@ -113,21 +105,25 @@ class KudaGoGateway(BaseGateway):
         place = event.get("place", {})
 
         if place is None:
-            #если не получилось достать, делаем длинную версию
-            place = event.get("body_text").split('\n')[-1].strip().replace('KudaGo: ', '')
+            # если не получилось достать, делаем длинную версию
+            place = (
+                event.get("body_text").split("\n")[-1].strip().replace("KudaGo: ", "")
+            )
         else:
             place = f"{place.get('title', '')}\n{place.get('address', '')}".strip()
 
         return place
-
 
     def _get_event_start_date(self, event: dict) -> str:
         """
         Возвращает дату начала события.
         """
         start_date = event.get("dates", [{}])[0].get("start", 0)
-        return datetime.today().strftime(self.DATE_FORMAT) if (self.TIME_NOW - self.SECONDS_DAY) > start_date else event["dates"][0].get("start_date", "")
-
+        return (
+            datetime.today().strftime(self.DATE_FORMAT)
+            if (self.TIME_NOW - self.SECONDS_DAY) > start_date
+            else event["dates"][0].get("start_date", "")
+        )
 
     def _get_event_start_date_from_details(self, event_details: dict) -> str:
         """
@@ -135,9 +131,10 @@ class KudaGoGateway(BaseGateway):
         """
         dates = event_details.get("dates", [])
         if dates and not dates[-1].get("is_startless", True):
-            return datetime.fromtimestamp(dates[-1]["start"]).strftime(self.DATETIME_FORMAT)
+            return datetime.fromtimestamp(dates[-1]["start"]).strftime(
+                self.DATETIME_FORMAT
+            )
         return ""
-
 
     def _get_event_image(self, event_details: dict) -> bytes:
         """
@@ -153,18 +150,17 @@ class KudaGoGateway(BaseGateway):
                 logging.error(f"Ошибка при загрузке изображения: {e}")
         return b""
 
-
     def _add_kuda_go_events(self, current_json: list[dict]) -> list[dict]:
         """
         Добавляет события из JSON в список.
         """
         events_list = []
         for event in current_json:
-            #еще одно условие, чтобы акций не было
+            # еще одно условие, чтобы акций не было
             passed_condition = False
-            if 'categories' in event.keys():
+            if "categories" in event.keys():
                 passed_condition = False
-                if not 'stock' in event['categories']:
+                if "stock" not in event["categories"]:
                     passed_condition = True
             else:
                 passed_condition = True
@@ -175,10 +171,11 @@ class KudaGoGateway(BaseGateway):
                         if "акции и скидки" not in parsed_event["tags"]:
                             events_list.append(parsed_event)
                     except Exception as e:
-                        logging.error(f"Ошибка при добавлении события {event['id']}: {e}")
-                        input(f'{e}')
+                        logging.error(
+                            f"Ошибка при добавлении события {event['id']}: {e}"
+                        )
+                        input(f"{e}")
         return events_list
-
 
     def fetch_content(self) -> list[dict]:
         """
@@ -190,7 +187,7 @@ class KudaGoGateway(BaseGateway):
             passed = True
             page = 0
             while passed:
-                page+=1
+                page += 1
                 url = f"{self.BASE_URL}/events/?lang=ru&page={page}&page_size=100&fields=id,title,dates,tags,price,place,description,price&expand=images,place,location,dates&text_format=text&location=nnv&actual_since={self.TIME_START}&actual_until={self.TIME_END}&is_free={free}"
                 try:
                     response = requests.get(url)
@@ -212,11 +209,11 @@ class KudaGoGateway(BaseGateway):
 
     """
     def fetch_content(self) -> list[dict]:
-        
+
         Метод для получения событий с KudaGo. Должен быть реализован в соответствии с API.
 
         :return: Список событий в виде словарей.
-        
+
         # Здесь может быть запрос к API KudaGo, например:
         # response = self.client.get_updates() или другая логика взаимодействия с API
         # тут приведет пример данных.
