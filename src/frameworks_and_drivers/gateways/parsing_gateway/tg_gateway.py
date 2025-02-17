@@ -8,7 +8,6 @@ import requests
 import re
 
 from telethon.sync import TelegramClient
-from telethon.errors import SessionPasswordNeededError, AuthRestartError
 from telethon.tl.types import MessageEntityUrl, MessageEntityTextUrl
 
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
@@ -59,9 +58,12 @@ def load_channels(filename: str = "channels.txt") -> List[str]:
 
 
 class TelegramGateway(BaseGateway):
-    def __init__(self, state_file: str = "last_processed.json",
-                 config_file: str = "telegram_config.json",
-                 channels_file: str = "channels.txt") -> None:
+    def __init__(
+        self,
+        state_file: str = "last_processed.json",
+        config_file: str = "telegram_config.json",
+        channels_file: str = "channels.txt",
+    ) -> None:
         """
         Инициализирует объект TelegramGateway:
          - Считывает конфигурацию из config_file.
@@ -86,8 +88,10 @@ class TelegramGateway(BaseGateway):
 
         # Если клиент не авторизован, выбрасываем исключение.
         if not self.client.is_user_authorized():
-            logging.error("Клиент не авторизован. "
-                          "Запустите авторизацию вручную один раз, чтобы сохранить сессию, либо настройте автоматическую авторизацию через конфигурацию.")
+            logging.error(
+                "Клиент не авторизован. "
+                "Запустите авторизацию вручную один раз, чтобы сохранить сессию, либо настройте автоматическую авторизацию через конфигурацию."
+            )
             raise Exception("TelegramClient не авторизован!")
 
         # Загружаем состояние (последний обработанный message_id для каждого канала)
@@ -157,15 +161,19 @@ class TelegramGateway(BaseGateway):
                     links = []
                     if msg.entities:
                         for entity in msg.entities:
-                            if isinstance(entity, (MessageEntityUrl, MessageEntityTextUrl)):
-                                if hasattr(entity, 'url') and entity.url:
+                            if isinstance(
+                                entity, (MessageEntityUrl, MessageEntityTextUrl)
+                            ):
+                                if hasattr(entity, "url") and entity.url:
                                     url = entity.url
                                 else:
-                                    url = msg.message[entity.offset: entity.offset + entity.length]
+                                    url = msg.message[
+                                        entity.offset : entity.offset + entity.length
+                                    ]
                                 links.append(expand_url(url))
                     else:
                         # Если сущностей нет, пытаемся найти ссылки через регулярное выражение
-                        found_links = re.findall(r'(https?://\S+)', msg.message)
+                        found_links = re.findall(r"(https?://\S+)", msg.message)
                         for url in found_links:
                             links.append(expand_url(url))
 
@@ -174,15 +182,18 @@ class TelegramGateway(BaseGateway):
                     if links:
                         full_text += "\n" + "\n".join(links)
 
-                    events.append({
-                        "event_id": msg.id,
-                        "channel": channel,
-                        "text": full_text,  # Передаём объединённый текст с ссылками
-                        "date": msg.date.isoformat() if msg.date else None,
-                        "image": image_bytes
-                    })
+                    events.append(
+                        {
+                            "event_id": msg.id,
+                            "channel": channel,
+                            "text": full_text,  # Передаём объединённый текст с ссылками
+                            "date": msg.date.isoformat() if msg.date else None,
+                            "image": image_bytes,
+                        }
+                    )
         self._save_state()
         return events
+
 
 if __name__ == "__main__":
     try:

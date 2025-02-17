@@ -1,15 +1,24 @@
 # get_content_tg_usecase.py
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
+from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
+    NLPProcessorBase,
+)
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
 from datetime import datetime
 
 
 class GetContentTgUseCase(AbstractUseCase):
-    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase,
-                 content_repo, file_repo) -> None:
-        print("[ИНИЦИАЛИЗАЦИЯ] UseCase для получения контента из Telegram и обработки NLP инициализирован")
+    def __init__(
+        self,
+        gateway: BaseGateway,
+        nlp_processor: NLPProcessorBase,
+        content_repo,
+        file_repo,
+    ) -> None:
+        print(
+            "[ИНИЦИАЛИЗАЦИЯ] UseCase для получения контента из Telegram и обработки NLP инициализирован"
+        )
         self.gateway = gateway
         self.nlp_processor = nlp_processor
 
@@ -39,46 +48,57 @@ class GetContentTgUseCase(AbstractUseCase):
             print(f"[ОБРАБОТКА] Результат обработки NLP: {processed_result}")
 
             if not processed_result:
-                print(f"[ОБРАБОТКА] Пропускаем сообщение {i + 1}: нет обработанных данных")
+                print(
+                    f"[ОБРАБОТКА] Пропускаем сообщение {i + 1}: нет обработанных данных"
+                )
                 continue
 
             # Получаем картинку из исходного поста, чтобы прикрепить её ко всем событиям
-            image_data = raw.get('image') or b''
+            image_data = raw.get("image") or b""
 
             # Если результат – список событий
             if isinstance(processed_result, list):
                 for event in processed_result:
                     # Если у события не задано поле image, добавляем общую картинку
-                    if 'image' not in event or event.get('image') is None:
-                        event['image'] = image_data
+                    if "image" not in event or event.get("image") is None:
+                        event["image"] = image_data
                     content = self._create_schema_from_event(event)
                     if content:
-                        print(f"[РЕЗУЛЬТАТ] Создан объект ContentPydanticSchema: {content}")
+                        print(
+                            f"[РЕЗУЛЬТАТ] Создан объект ContentPydanticSchema: {content}"
+                        )
                         results.append(content)
             # Если результат – одно событие (словарь)
             elif isinstance(processed_result, dict):
-                if 'image' not in processed_result or processed_result.get('image') is None:
-                    processed_result['image'] = image_data
+                if (
+                    "image" not in processed_result
+                    or processed_result.get("image") is None
+                ):
+                    processed_result["image"] = image_data
                 content = self._create_schema_from_event(processed_result)
                 if content:
                     print(f"[РЕЗУЛЬТАТ] Создан объект ContentPydanticSchema: {content}")
                     results.append(content)
             else:
-                print(f"[ОБРАБОТКА] Неизвестный формат данных от NLP для сообщения {i + 1}")
+                print(
+                    f"[ОБРАБОТКА] Неизвестный формат данных от NLP для сообщения {i + 1}"
+                )
 
-        print(f"[ВЫПОЛНЕНИЕ] Обработка завершена. Всего обработано сообщений: {len(results)}")
+        print(
+            f"[ВЫПОЛНЕНИЕ] Обработка завершена. Всего обработано сообщений: {len(results)}"
+        )
         return results
 
     def _create_schema_from_event(self, event: dict) -> ContentPydanticSchema | None:
         """Вспомогательный метод для создания ContentPydanticSchema из словаря события."""
         try:
             # Нормализуем поле contact: если это не список, оборачиваем в список.
-            contact = event.get('contact', [])
+            contact = event.get("contact", [])
             if not isinstance(contact, list):
                 contact = [contact]
 
             # Нормализуем поле cost: если оно пустое или не может быть приведено к int, устанавливаем 0.
-            cost_raw = event.get('cost', 0)
+            cost_raw = event.get("cost", 0)
             try:
                 cost = int(cost_raw)
             except (ValueError, TypeError):
@@ -86,17 +106,17 @@ class GetContentTgUseCase(AbstractUseCase):
 
             # Здесь можно добавить дополнительное преобразование дат, если они приходят в виде строк.
             return ContentPydanticSchema(
-                name=event.get('name', 'Default Name FROM TG'),
-                description=event.get('description', 'No description available'),
-                tags=event.get('tags', []),
-                image=event.get('image') or b'',
+                name=event.get("name", "Default Name FROM TG"),
+                description=event.get("description", "No description available"),
+                tags=event.get("tags", []),
+                image=event.get("image") or b"",
                 contact=contact,
-                date_start=event.get('data_start', datetime.now()),
-                date_end=event.get('data_end', datetime.now()),
-                time=event.get('time', '00:00'),
-                location=event.get('location', 'Unknown'),
+                date_start=event.get("data_start", datetime.now()),
+                date_end=event.get("data_end", datetime.now()),
+                time=event.get("time", "00:00"),
+                location=event.get("location", "Unknown"),
                 cost=cost,
-                city=event.get('city', 'Unknown')
+                city=event.get("city", "Unknown"),
             )
         except Exception as e:
             print(f"[ОБРАБОТКА] Ошибка при создании схемы: {e}")
@@ -105,8 +125,12 @@ class GetContentTgUseCase(AbstractUseCase):
 
 # Блок для ручного тестирования usecase:
 if __name__ == "__main__":
-    from frameworks_and_drivers.gateways.parsing_gateway.tg_gateway import TelegramGateway
-    from frameworks_and_drivers.gateways.nlp_gateway.nlp_processor_gateway import NLPProcessor
+    from frameworks_and_drivers.gateways.parsing_gateway.tg_gateway import (
+        TelegramGateway,
+    )
+    from frameworks_and_drivers.gateways.nlp_gateway.nlp_processor_gateway import (
+        NLPProcessor,
+    )
 
     gateway = TelegramGateway()
     nlp_processor = NLPProcessor()

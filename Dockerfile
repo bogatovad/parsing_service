@@ -19,4 +19,4 @@ COPY . /app/
 RUN chmod +x /app
 
 # Определение команды по умолчанию
-CMD ["python", "src/frameworks_and_drivers/django/parsing/manage.py"]
+CMD ["python", "/app/src/frameworks_and_drivers/django/parsing/manage.py"]

@@ -23,6 +23,6 @@ class YandexAfishaGateway(BaseGateway):
         # тут приведет пример данных.
         events = [
             {"event_id": 1, "name": "Event 1", "description": "Description 1"},
-            {"event_id": 2, "name": "Event 2", "description": "Description 2"}
+            {"event_id": 2, "name": "Event 2", "description": "Description 2"},
         ]
         return events

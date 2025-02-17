@@ -1,18 +1,24 @@
 # nlp_processor.py
 import json
-import re
 import time
 import requests
 import yaml
 import logging
 import os
 
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
+from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
+    NLPProcessorBase,
+)
 
 logging.basicConfig(level=logging.INFO)
 
+
 class NLPProcessor(NLPProcessorBase):
-    def __init__(self, config_file: str = "nlp_config.json", prompt_file: str = "nlp_prompts.yaml") -> None:
+    def __init__(
+        self,
+        config_file: str = "nlp_config.json",
+        prompt_file: str = "nlp_prompts.yaml",
+    ) -> None:
         """
         Инициализирует NLPProcessor.
         Загружает конфигурацию (ключи API, число попыток, интервалы) из JSON-файла,
@@ -26,10 +32,16 @@ class NLPProcessor(NLPProcessorBase):
 
         with open(self.config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
-        self.thebai_api_url = config.get("THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions")
+        self.thebai_api_url = config.get(
+            "THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions"
+        )
         self.thebai_api_key = config.get("THEBAI_API_KEY", "your_thebai_api_key")
-        self.openrouter_api_url = config.get("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
-        self.openrouter_api_key = config.get("OPENROUTER_API_KEY", "your_openrouter_api_key")
+        self.openrouter_api_url = config.get(
+            "OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions"
+        )
+        self.openrouter_api_key = config.get(
+            "OPENROUTER_API_KEY", "your_openrouter_api_key"
+        )
         self.attempts = config.get("attempts", 3)
         self.attempt_interval = config.get("attempt_interval", 60)  # в секундах
 
@@ -62,7 +74,7 @@ class NLPProcessor(NLPProcessorBase):
                 logging.error(f"Ошибка сохранения некорректного ответа: {file_e}")
             return []
 
-    def _call_api(self, prompt: str, service: str = "thebai", is_event: bool = False ):
+    def _call_api(self, prompt: str, service: str = "thebai", is_event: bool = False):
         """
         Унифицированный метод для вызова внешнего API с несколькими попытками.
         Если service == "thebai", обращается к основному сервису, иначе – к openrouter.
@@ -80,11 +92,11 @@ class NLPProcessor(NLPProcessorBase):
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "stream": False
+            "stream": False,
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         for attempt in range(1, self.attempts + 1):
@@ -102,7 +114,9 @@ class NLPProcessor(NLPProcessorBase):
             except requests.exceptions.RequestException as e:
                 logging.error(f"Ошибка запроса к {service} (попытка {attempt}): {e}")
                 if attempt < self.attempts:
-                    logging.info(f"Ожидание {self.attempt_interval} секунд перед повтором...")
+                    logging.info(
+                        f"Ожидание {self.attempt_interval} секунд перед повтором..."
+                    )
                     time.sleep(self.attempt_interval)
                 else:
                     logging.info(f"Не удалось получить ответ от {service}.")
@@ -125,7 +139,7 @@ class NLPProcessor(NLPProcessorBase):
         """
         main_prompt_template = self.prompt_config.get("main_prompt", "")
         prompt = main_prompt_template.format(text=text)
-        result_list = self._call_api(prompt, service="thebai", is_event = True)
+        result_list = self._call_api(prompt, service="thebai", is_event=True)
         if isinstance(result_list, list):
             return result_list
         return []
@@ -136,7 +150,9 @@ class NLPProcessor(NLPProcessorBase):
         Использует шаблон category_prompt из YAML.
         Возвращает строку с категорией, полученную из API.
         """
-        category_prompt_template = self.prompt_config.get("category_prompt", "Определи категорию: {text}")
+        category_prompt_template = self.prompt_config.get(
+            "category_prompt", "Определи категорию: {text}"
+        )
         prompt = category_prompt_template.format(text=event_text)
         result = self._call_api(prompt, service="thebai")
         if result:
@@ -149,7 +165,9 @@ class NLPProcessor(NLPProcessorBase):
         Использует шаблон link_title_prompt из YAML.
         Возвращает сгенерированное название как строку.
         """
-        link_prompt_template = self.prompt_config.get("link_title_prompt", "Придумай название для ссылки: {text}")
+        link_prompt_template = self.prompt_config.get(
+            "link_title_prompt", "Придумай название для ссылки: {text}"
+        )
         prompt = link_prompt_template.format(text=event_text)
         result_list = self._call_api(prompt, service="thebai")
         if result_list:
@@ -176,8 +194,8 @@ class NLPProcessor(NLPProcessorBase):
         analysis_results = self.process(text)
         # Для каждого события добавляем данные изображения и остальные поля из исходного поста
         for event in analysis_results:
-            if 'image' not in event or event.get('image') is None:
-                event['image'] = image_data
+            if "image" not in event or event.get("image") is None:
+                event["image"] = image_data
             event.update(post_copy)
         return analysis_results
 
@@ -187,7 +205,9 @@ class NLPProcessor(NLPProcessorBase):
         Использует шаблон link_title_prompt из YAML.
         Возвращает сгенерированное название как строку.
         """
-        link_prompt_template = self.prompt_config.get("link_name_prompt", "Придумай название для описания: {text}")
+        link_prompt_template = self.prompt_config.get(
+            "link_name_prompt", "Придумай название для описания: {text}"
+        )
         prompt = link_prompt_template.format(text=event_text)
         result = self._call_api(prompt, service="thebai")
         if result:
