@@ -15,8 +15,8 @@ class GetContentKudaGoUseCase(AbstractUseCase):
     def __init__(
         self,
         gateway: BaseGateway,
-        nlp_processor: NLPProcessorBase,
         content_repo: ContentRepositoryProtocol,
+        nlp_processor: NLPProcessorBase,
         file_repo: FileRepositoryProtocol,
     ) -> None:
         self.gateway = gateway
@@ -28,6 +28,9 @@ class GetContentKudaGoUseCase(AbstractUseCase):
         raw_content = self.gateway.fetch_content()
         result = []
 
+        # TODO: тут хранится список тегов которые есть в приложении.
+        # TODO: наша задача определить какой из этих тегов НАИБОЛЕЕ близок к element.get('tags', []) и выбрать его
+        names = self.content_repo.get_all_name_contents()  # noqa: F841
         for element in raw_content:
             processed_link_name = self.nlp_processor.generate_link_name_by_description(
                 element.get("description")
@@ -35,7 +38,6 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             processed_categories = self.nlp_processor.determine_category(
                 element.get("description")
             )
-
             content_element = ContentPydanticSchema(
                 name=element.get("name", "Default Name FROM KUDA GO"),
                 description=element.get("description", "No description available"),

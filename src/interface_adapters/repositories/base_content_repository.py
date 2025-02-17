@@ -26,6 +26,6 @@ class ContentRepositoryProtocol(ABC):
         """
         Метод для получения всех имен контентов.
 
-        :return: Список имен контентов.
+        :return: Список имен событий.
         """
         raise NotImplementedError

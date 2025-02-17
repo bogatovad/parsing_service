@@ -27,8 +27,6 @@ class GetContentTimepadUseCase(AbstractUseCase):
         raw_content: list[dict] = self.gateway.fetch_content()
 
         # todo: Сырые данные поступают на вход nlp_processor.process которые отдает обработанные данные.
-        processed_content = self.nlp_processor.process(raw_content)  # noqa: F841
-
         # todo: тут должен быть код, который получает контент из timepad.
         # todo: и отдает его в list[ContentPydanticSchema].
         # todo: предварительно данные, полученные из тг должны быть обработаны с помошью nlp_processor.

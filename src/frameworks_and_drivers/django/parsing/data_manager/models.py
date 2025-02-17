@@ -63,6 +63,7 @@ class Content(GenericModel):
     location = models.CharField(max_length=250, null=True, blank=True, default=None)
     cost = models.IntegerField(null=True, blank=True, default=None)
     city = models.CharField(max_length=50, choices=CITY_CHOICES, default="nn")
+    unique_id = models.CharField(max_length=250, unique=True, editable=False)
 
     def get_tags(self):
         return "\n".join([t.name for t in self.tags.all()])

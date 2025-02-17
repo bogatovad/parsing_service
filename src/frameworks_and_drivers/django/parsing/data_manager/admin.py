@@ -21,6 +21,7 @@ class ContentAdmin(admin.ModelAdmin):
         "location",
         "cost",
         "city",
+        "unique_id",
         "get_tags",
     )
 

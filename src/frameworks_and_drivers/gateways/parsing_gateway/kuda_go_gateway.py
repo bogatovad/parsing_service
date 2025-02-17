@@ -48,7 +48,6 @@ class KudaGoGateway(BaseGateway):
         """
         Парсит событие и возвращает его в формате, удобном для использования.
         """
-
         event = self._fetch_event_details(event["id"])
         event["place"] = "" if "place" not in event.keys() else event["place"]
 

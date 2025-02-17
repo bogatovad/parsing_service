@@ -30,6 +30,7 @@ services:
       - environments/db.env
       - environments/web.env
       - environments/minio.env
+      - environments/tg.env
 
   celery-worker-parsing:
     build:
