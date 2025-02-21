@@ -75,7 +75,7 @@ class KudaGoGateway(BaseGateway):
             else 0,  # дублируется возможно
             "url": "",
             "image": "",
-            "city": "nnv",
+            "city": "nn",
         }
 
         if event:
@@ -188,7 +188,11 @@ class KudaGoGateway(BaseGateway):
             page = 0
             while passed:
                 page += 1
-                url = f"{self.BASE_URL}/events/?lang=ru&page={page}&page_size=100&fields=id,title,dates,tags,price,place,description,price&expand=images,place,location,dates&text_format=text&location=nnv&actual_since={self.TIME_START}&actual_until={self.TIME_END}&is_free={free}"
+                url = (
+                    f"{self.BASE_URL}/events/?lang=ru&page={page}&page_size=100&fields=id,title,dates,"
+                    f"tags,price,place,description,price&expand=images,place,location,dates&text_format=text&"
+                    f"location=nnv&actual_since={self.TIME_START}&actual_until={self.TIME_END}&is_free={free}"
+                )
                 try:
                     response = requests.get(url)
                     if response.status_code == 200:
@@ -204,22 +208,4 @@ class KudaGoGateway(BaseGateway):
                 except requests.RequestException as e:
                     logging.error(f"Ошибка при запросе событий: {e}")
                     break
-
         return events
-
-    """
-    def fetch_content(self) -> list[dict]:
-
-        Метод для получения событий с KudaGo. Должен быть реализован в соответствии с API.
-
-        :return: Список событий в виде словарей.
-
-        # Здесь может быть запрос к API KudaGo, например:
-        # response = self.client.get_updates() или другая логика взаимодействия с API
-        # тут приведет пример данных.
-        events = [
-            {"event_id": 1, "name": "Event 1", "description": "Description 1"},
-            {"event_id": 2, "name": "Event 2", "description": "Description 2"}
-        ]
-        return events
-    """

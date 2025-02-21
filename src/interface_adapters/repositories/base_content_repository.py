@@ -29,3 +29,11 @@ class ContentRepositoryProtocol(ABC):
         :return: Список имен событий.
         """
         raise NotImplementedError
+
+    def get_all_unique_ids(self) -> list[str]:
+        """
+        Метод для получения всех уникальных идентификаторов контента.
+
+        :return: Список уникальных идентификаторов контента.
+        """
+        raise NotImplementedError

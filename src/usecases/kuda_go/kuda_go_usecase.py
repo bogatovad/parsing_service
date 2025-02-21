@@ -27,12 +27,15 @@ class GetContentKudaGoUseCase(AbstractUseCase):
     def execute(self) -> list[ContentPydanticSchema]:
         raw_content = self.gateway.fetch_content()
         result = []
+        exists_unique_ids = self.content_repo.get_all_unique_ids()  # noqa: F841
 
-        # TODO: тут хранится список тегов которые есть в приложении.
-        # TODO: наша задача определить какой из этих тегов НАИБОЛЕЕ близок к element.get('tags', []) и выбрать его
-        names = self.content_repo.get_all_name_contents()  # noqa: F841
         for element in raw_content:
-            processed_link_name = self.nlp_processor.generate_link_name_by_description(
+            unique_id = element.get("name", "Default Name FROM KUDA GO")
+
+            if unique_id in exists_unique_ids:
+                continue
+
+            processed_link_name = self.nlp_processor.generate_link_title(
                 element.get("description")
             )
             processed_categories = self.nlp_processor.determine_category(
@@ -50,6 +53,9 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 location=element.get("location", "Unknown"),
                 cost=element.get("cost", 0),
                 city=element.get("city", ""),
+                unique_id=element.get("name", "Default Name FROM KUDA GO"),
             )
+            print(content_element)
             result.append(content_element)
+        self.content_repo.save_content(result)
         return result
