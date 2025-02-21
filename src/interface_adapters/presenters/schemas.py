@@ -17,7 +17,7 @@ class ContentPydanticSchema(BaseModel):
     date_end: datetime | None
     time: str
     location: str
-    cost: int
+    cost: list
     city: str
     unique_id: str
 
