@@ -14,8 +14,6 @@ services:
     ports:
       - "8000:8000"
     image: web
-    depends_on:
-      - db
     env_file:
       - environments/db.env
       - environments/web.env
@@ -29,9 +27,6 @@ services:
     command: celery -A frameworks_and_drivers.django.parsing.celery_app worker --loglevel=debug
     volumes:
       - .:/app
-    depends_on:
-      - db
-      - redis
     env_file:
       - environments/db.env
       - environments/web.env
@@ -44,8 +39,6 @@ services:
     command: celery -A frameworks_and_drivers.django.parsing.celery_app beat --scheduler django_celery_beat.schedulers:DatabaseScheduler --loglevel=debug
     volumes:
       - .:/app
-    depends_on:
-      - db
     env_file:
       - environments/db.env
       - environments/web.env
