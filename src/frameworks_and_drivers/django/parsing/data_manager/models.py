@@ -24,6 +24,9 @@ class User(GenericModel):
     def __str__(self):
         return f"{self.username}"
 
+    class Meta:
+        db_table = "event_user"
+
 
 class MacroCategory(models.Model):
     name = models.CharField(max_length=250, db_index=True)
@@ -34,6 +37,9 @@ class MacroCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        db_table = "event_macrocategory"
 
 
 class Tags(GenericModel):
@@ -49,6 +55,9 @@ class Tags(GenericModel):
 
     def __str__(self):
         return f"{self.name}"
+
+    class Meta:
+        db_table = "event_tags"
 
 
 class Content(GenericModel):
@@ -73,6 +82,7 @@ class Content(GenericModel):
 
     class Meta:
         ordering = ["date_start"]
+        db_table = "event_content"
 
 
 class Like(GenericModel):
@@ -85,6 +95,7 @@ class Like(GenericModel):
             "user",
             "content",
         )
+        db_table = "event_like"
 
     def __str__(self):
         return f"{self.user.username} - {self.content.name} - {self.value} - {self.created}"
@@ -93,6 +104,9 @@ class Like(GenericModel):
 class Feedback(GenericModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="feedback")
     message = models.TextField()
+
+    class Meta:
+        db_table = "event_feedback"
 
 
 class RemovedFavorite(models.Model):
@@ -104,6 +118,7 @@ class RemovedFavorite(models.Model):
 
     class Meta:
         unique_together = ("user", "content")
+        db_table = "event_removedfavorite"
 
 
 class UserCategoryPreference(models.Model):
@@ -116,6 +131,7 @@ class UserCategoryPreference(models.Model):
 
     class Meta:
         unique_together = ("user", "tag")
+        db_table = "event_usercategorypreference"
 
     def __str__(self):
         return f"{self.user.username} - {self.tag.name}"
