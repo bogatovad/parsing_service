@@ -76,8 +76,7 @@ class NLPProcessor(NLPProcessorBase):
             if not choices:
                 logging.warning("API вернул пустой список choices.")
                 return []
-
-            return self._parse_response(choices[0]["message"]["content"])
+            return choices[0]["message"]["content"]
         except:  # noqa: E722
             return []
 
@@ -95,7 +94,6 @@ class NLPProcessor(NLPProcessorBase):
                 self.openrouter_api_key,
                 "anthropic/claude-3.5-sonnet",
             )
-
         result = self._send_request(url, api_key, model, prompt)
         return result
 
@@ -109,6 +107,7 @@ class NLPProcessor(NLPProcessorBase):
         main_prompt_template = self.prompt_config.get("main_prompt", "")
         prompt = main_prompt_template.replace("{text}", text)
         result_list = self._call_api(prompt, service="thebai")
+        result_list = self._parse_response(result_list)
         if isinstance(result_list, list):
             return result_list
         return []
@@ -123,10 +122,8 @@ class NLPProcessor(NLPProcessorBase):
             "category_prompt", "Определи категорию: {text}"
         )
         prompt = category_prompt_template.format(text=event_text)
-        result_list = self._call_api(prompt, service="thebai")
-        if result_list:
-            return str(result_list[0]).strip()
-        return ""
+        result = self._call_api(prompt, service="thebai")
+        return result
 
     def generate_link_title(self, event_text: str) -> str:
         """
@@ -138,10 +135,8 @@ class NLPProcessor(NLPProcessorBase):
             "link_title_prompt", "Придумай название для ссылки: {text}"
         )
         prompt = link_prompt_template.format(text=event_text)
-        result_list = self._call_api(prompt, service="thebai")
-        if result_list:
-            return str(result_list[0]).strip()
-        return ""
+        result = self._call_api(prompt, service="thebai")
+        return result
 
     def process_post(self, post: dict) -> list:
         """

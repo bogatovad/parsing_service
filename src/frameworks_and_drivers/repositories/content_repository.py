@@ -57,3 +57,9 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
 
     def get_all_unique_ids(self) -> list[str]:
         return list(Content.objects.values_list("unique_id", flat=True))
+
+    def all_today_contents(self) -> Content:
+        """
+        Метод для получения всех событий на сегодня.
+        """
+        pass

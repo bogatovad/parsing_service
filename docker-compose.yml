@@ -1,16 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15
-    restart: always
-    env_file:
-      - environments/db.env
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
   web-parsing:
     build:
       context: .
@@ -60,33 +50,6 @@ services:
       - environments/db.env
       - environments/web.env
       - environments/minio.env
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-
-  minio:
-    image: minio/minio:RELEASE.2024-06-06T09-36-42Z
-    hostname: "minio"
-    restart: always
-    volumes:
-      - minio_data:/minio_files:Z
-    env_file:
-      - environments/minio.env
-    command: 'minio server /minio_files --console-address ":9001"'
-    ports:
-      - 9000:9000
-      - 9001:9001
-
-  create_buckets:
-    image: minio/mc
-    depends_on:
-      - minio
-    env_file:
-      - environments/minio.env
-    entrypoint: "bash -c \"/usr/bin/mc config host add myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_USER}; /usr/bin/mc mb --quiet myminio/$${MINIO_BUCKET_NAME}; /usr/bin/mc anonymous set public myminio/$${MINIO_BUCKET_NAME}\""
-
 
 volumes:
   postgres_data:
