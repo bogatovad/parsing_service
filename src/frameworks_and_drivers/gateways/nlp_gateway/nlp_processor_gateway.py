@@ -40,19 +40,22 @@ class NLPProcessor(NLPProcessorBase):
         Если возвращен словарь, оборачивает его в список.
         Если парсинг не удаётся, сохраняет ответ в файл для отладки и возвращает пустой список.
         """
-        if response_text.strip() == "[НЕ АФИША]":
-            return []
         try:
-            parsed = json.loads(response_text)
-            print(f"{parsed=}")
-            if isinstance(parsed, list):
-                return parsed
-            elif isinstance(parsed, dict):
-                return [parsed]
-            else:
+            if response_text.strip() == "[НЕ АФИША]":
                 return []
-        except Exception as e:
-            logging.error(f"Ошибка парсинга ответа: {e}")
+            try:
+                parsed = json.loads(response_text)
+                print(f"{parsed=}")
+                if isinstance(parsed, list):
+                    return parsed
+                elif isinstance(parsed, dict):
+                    return [parsed]
+                else:
+                    return []
+            except Exception as e:
+                logging.error(f"Ошибка парсинга ответа: {e}")
+                return []
+        except:  # noqa: E722
             return []
 
     def _send_request(self, url, api_key, model, prompt):
