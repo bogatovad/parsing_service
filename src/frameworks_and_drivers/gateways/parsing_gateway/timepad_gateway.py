@@ -3,6 +3,10 @@ from typing import List, Dict
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 import requests
 from datetime import datetime
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 class TimepadGateway(BaseGateway):
@@ -31,6 +35,10 @@ class TimepadGateway(BaseGateway):
         }
         headers = {"Authorization": "Bearer 23ee52ea2569153a9b1abcaa24682020aa2363ba"}
         api_url = "https://api.timepad.ru/v1/events"
+        logging.info(f"Получаем события с Timepad: {api_url} {params} {headers}")
         response = requests.get(api_url, params=params, headers=headers)
+        logging.info(
+            f"Получили ответ от Timepad: {response.status_code} {response.text}"
+        )
         response.raise_for_status()
         return response.json()["values"]
