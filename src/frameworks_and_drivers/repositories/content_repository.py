@@ -72,8 +72,8 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
                 tag_for_save = Tags.objects.filter(name=tag).first()
                 if tag_for_save:
                     content_for_save.tags.add(tag_for_save)
-        except:  # noqa: E722
-            logging.info("Ошибка при сохранении контента")
+        except Exception as ex:  # noqa: E722
+            logging.info(f"Ошибка при сохранении контента {ex}")
 
     def get_all_tags(self) -> list[str]:
         return list(Tags.objects.values_list("name", flat=True))

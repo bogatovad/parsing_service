@@ -97,7 +97,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     )
                     logging.info(f"Saving content to database {schema}")
                     contents.append(schema)
-                    self.content_repo.save_content(schema)
+                    self.content_repo.save_one_content(schema)
             except:  # noqa: E722
                 continue
         return contents
