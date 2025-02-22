@@ -42,10 +42,15 @@ class GetContentTimepadUseCase(AbstractUseCase):
             if unique_id in unique_ids:
                 continue
             if content:
-                image_url = "https:" + content.get("poster_image").get("uploadcare_url")
-                response = requests.get(image_url)
-                response.raise_for_status()
-                content_bytes = response.content
+                try:
+                    image_url = "https:" + content.get("poster_image").get(
+                        "uploadcare_url"
+                    )
+                    response = requests.get(image_url)
+                    response.raise_for_status()
+                    content_bytes = response.content
+                except AttributeError:
+                    content_bytes = b""
                 tags = [item.get("name") for item in content.get("categories")]
                 prices = [item.get("price") for item in content.get("ticket_types")]
                 processed_link_name = self.nlp_processor.generate_link_title(
