@@ -38,66 +38,77 @@ class GetContentTimepadUseCase(AbstractUseCase):
 
         for content in raw_content:
             try:
+                if not content:
+                    continue
+
                 logging.info(f"Processing content from Timepad {content}")
                 unique_id = str(content.get("id")) + "timepad"
 
                 if unique_id in unique_ids:
                     continue
-                if content:
-                    try:
+
+                try:
+                    if "poster_image" in content:
                         image_url = "https:" + content.get("poster_image").get(
                             "uploadcare_url"
                         )
-                        response = requests.get(image_url)
-                        response.raise_for_status()
-                        content_bytes = response.content
-                    except AttributeError:
-                        # todo: тут надо генерить картинку через кандинского.
-                        content_bytes = b""
-                    tags = [item.get("name") for item in content.get("categories")]
-                    prices = [item.get("price") for item in content.get("ticket_types")]
-                    processed_link_name = self.nlp_processor.generate_link_title(
-                        content.get("description_short")
-                    )
-                    processed_categories = self.nlp_processor.determine_category(
-                        content.get("description_short") + ",".join(tags)
-                    )
-                    contacts = [{processed_link_name: content.get("url", {})}]
-                    datetime_obj = datetime.strptime(
+                    else:
+                        if "logo_image" in content:
+                            image_url = "https:" + content.get("logo_image").get(
+                                "uploadcare_url"
+                            )
+                    response = requests.get(image_url)
+                    response.raise_for_status()
+                    content_bytes = response.content
+                except AttributeError:
+                    # todo: тут надо генерить картинку через кандинского.
+                    content_bytes = b""
+
+                tags = [item.get("name") for item in content.get("categories")]
+                prices = [item.get("price") for item in content.get("ticket_types")]
+                processed_link_name = self.nlp_processor.generate_link_title(
+                    content.get("description_short")
+                )
+                processed_categories = self.nlp_processor.determine_category(
+                    content.get("description_short") + ",".join(tags)
+                )
+                contacts = [{processed_link_name: content.get("url", {})}]
+                datetime_obj = datetime.strptime(
+                    content.get("starts_at"), "%Y-%m-%dT%H:%M:%S%z"
+                )
+                date_end = content.get("ends_at")
+                date_end = (
+                    datetime.strptime(date_end, "%Y-%m-%dT%H:%M:%S%z")
+                    if date_end
+                    else None
+                )
+                city = content.get("location").get("city")
+                name = content.get("name")
+                clean_name = html.unescape(name).replace("�", "")
+                description = content.get("description_short")
+                clean_description = html.unescape(description).replace("�", "")
+                location = content.get("location").get("address")
+                clean_location = html.unescape(location).replace("�", "")
+                clean_location = clean_location if clean_location else ""
+                schema = ContentPydanticSchema(
+                    name=clean_name,
+                    description=clean_description,
+                    tags=[processed_categories],
+                    image=content_bytes,
+                    contact=contacts,
+                    date_start=datetime.strptime(
                         content.get("starts_at"), "%Y-%m-%dT%H:%M:%S%z"
-                    )
-                    date_end = content.get("ends_at")
-                    date_end = (
-                        datetime.strptime(date_end, "%Y-%m-%dT%H:%M:%S%z")
-                        if date_end
-                        else None
-                    )
-                    city = content.get("location").get("city")
-                    name = content.get("name")
-                    clean_name = html.unescape(name).replace("�", "")
-                    description = content.get("description_short")
-                    clean_description = html.unescape(description).replace("�", "")
-                    location = content.get("location").get("address")
-                    location = location if location else ""
-                    schema = ContentPydanticSchema(
-                        name=clean_name,
-                        description=clean_description,
-                        tags=[processed_categories],
-                        image=content_bytes,
-                        contact=contacts,
-                        date_start=datetime.strptime(
-                            content.get("starts_at"), "%Y-%m-%dT%H:%M:%S%z"
-                        ),
-                        date_end=date_end,
-                        time=datetime_obj.strftime("%H:%M"),
-                        location=location,
-                        cost=min(prices),
-                        city=self.cities.get(city),
-                        unique_id=unique_id,
-                    )
-                    logging.info(f"Saving content to database {schema}")
-                    contents.append(schema)
-                    self.content_repo.save_one_content(schema)
+                    ),
+                    date_end=date_end,
+                    time=datetime_obj.strftime("%H:%M"),
+                    location=clean_location,
+                    cost=min(prices),
+                    city=self.cities.get(city),
+                    unique_id=unique_id,
+                )
+                logging.info(f"Saving content to database {schema}")
+                contents.append(schema)
+                self.content_repo.save_one_content(schema)
             except:  # noqa: E722
                 continue
         return contents
