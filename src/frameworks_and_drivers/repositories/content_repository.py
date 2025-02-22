@@ -49,6 +49,32 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
             except:  # noqa: E722
                 logging.info("Ошибка при сохранении контента")
 
+    def save_one_content(self, content: ContentPydanticSchema) -> None:
+        try:
+            content_for_save = Content(
+                name=content.name,
+                description=content.description,
+                contact=content.contact,
+                date_start=content.date_start,
+                date_end=content.date_end,
+                time=content.time,
+                location=content.location,
+                cost=content.cost,
+                city=content.city,
+                unique_id=content.unique_id,
+            )
+            buffer = io.BytesIO(content.image)
+            content_for_save.image.save(
+                name=f"autopost{uuid.uuid4()}", content=File(buffer)
+            )
+            content_for_save.save()
+            for tag in content.tags:
+                tag_for_save = Tags.objects.filter(name=tag).first()
+                if tag_for_save:
+                    content_for_save.tags.add(tag_for_save)
+        except:  # noqa: E722
+            logging.info("Ошибка при сохранении контента")
+
     def get_all_tags(self) -> list[str]:
         return list(Tags.objects.values_list("name", flat=True))
 
