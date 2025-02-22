@@ -15,8 +15,8 @@ class GetContentController:
         """Get content from different sources"""
         try:
             self.usecase_factory.get_timepad_content_usecase().execute()
-            # self.usecase_factory.get_tg_content_usecase().execute()
-            # self.usecase_factory.get_kuda_go_content_usecase().execute()
+            self.usecase_factory.get_tg_content_usecase().execute()
+            self.usecase_factory.get_kuda_go_content_usecase().execute()
             return True
         except Exception:
             raise RunUsecaseException
