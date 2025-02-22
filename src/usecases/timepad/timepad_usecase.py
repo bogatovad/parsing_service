@@ -39,7 +39,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
             image_url = "https:" + content.get("poster_image").get("uploadcare_url")
             response = requests.get(image_url)
             response.raise_for_status()
-            content = response.content
+            content_bytes = response.content
             tags = [item.get("name") for item in content.get("categories")]
             prices = [item.get("price") for item in content.get("ticket_types")]
             processed_link_name = self.nlp_processor.generate_link_title(
@@ -61,7 +61,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
                 name=content.get("name"),
                 description=content.get("description_short"),
                 tags=[processed_categories],
-                image=content.get("image", b"data"),
+                image=content_bytes,
                 contact=contacts,
                 date_start=datetime.strptime(
                     content.get("starts_at"), "%Y-%m-%dT%H:%M:%S%z"
