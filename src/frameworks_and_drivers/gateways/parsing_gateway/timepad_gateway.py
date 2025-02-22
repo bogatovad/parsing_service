@@ -23,15 +23,13 @@ class TimepadGateway(BaseGateway):
 
         current_date = datetime.now().date()
         formatted_current_date = current_date.strftime("%Y-%m-%d")
-
         params = {
-            "fields": "location,ticket_types,description_short,organization,ends_at",
+            "fields": "location,image,ticket_types,description_short,organization,ends_at",
             "cities": "Нижний Новгород",
             "starts_at_min": formatted_current_date,
             "sort": "starts_at",
         }
         headers = {"Authorization": "Bearer 23ee52ea2569153a9b1abcaa24682020aa2363ba"}
-        # todo: надо проверить, есть ли уже такие события в БД через event_ids_exclude
         api_url = "https://api.timepad.ru/v1/events"
         response = requests.get(api_url, params=params, headers=headers)
         response.raise_for_status()
