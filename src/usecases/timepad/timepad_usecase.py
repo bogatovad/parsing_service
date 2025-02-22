@@ -11,6 +11,7 @@ from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
 import logging
+import html
 
 
 logging.basicConfig(level=logging.INFO)
@@ -50,6 +51,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     response.raise_for_status()
                     content_bytes = response.content
                 except AttributeError:
+                    # todo: тут надо генерить картинку через кандинского.
                     content_bytes = b""
                 tags = [item.get("name") for item in content.get("categories")]
                 prices = [item.get("price") for item in content.get("ticket_types")]
@@ -70,9 +72,13 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     else None
                 )
                 city = content.get("location").get("city")
+                name = content.get("name")
+                clean_name = html.unescape(name).replace("�", "")
+                description = content.get("description_short")
+                clean_description = html.unescape(description).replace("�", "")
                 schema = ContentPydanticSchema(
-                    name=content.get("name"),
-                    description=content.get("description_short"),
+                    name=clean_name,
+                    description=clean_description,
                     tags=[processed_categories],
                     image=content_bytes,
                     contact=contacts,
