@@ -185,7 +185,26 @@ class KudaGoGateway(BaseGateway):
                 schedules = event_details['dates'][0]['schedules']
                 schedule_list, schedule_string = [], ''
                 for n, schedule in enumerate(schedules):
-                    days_of_week = ', '.join([week_day[el] for el in schedule['days_of_week']])
+                    previous = 0
+                    inter_string = ''
+                    for d, days in enumerate(schedule['days_of_week']):
+                        first = days
+                        previous = 0
+                        for day in days:
+                            first = days[0]
+                            status = False if len(days) == 1 else True
+                            still_continue = True
+                            if status and day != days[len(days)-1]:
+                                still_continue = True if schedule['days_of_week'][d] + 1 == schedule['days_of_week'][d+1] else False
+                                last = schedule['days_of_week'][d+1]
+                                # врзможно стоит дополнить случваем, когда у нас still_continue false, но элементы еще есть
+                                if not still_continue:
+                                    inter_string = f"{week_day[first]} - {week_day[last]}"
+                            elif day == days[len(days)-1] and still_continue:
+                                last = schedule['days_of_week'][d+1]
+                                inter_string = f"{week_day[first]} - {week_day[last]}"
+
+                    days_of_week = inter_string if inter_string else ', '.join([week_day[el] for el in schedule['days_of_week']])
                     #Специальный случай (в ходе тестирования end_time по событиям null)
                     end_time = True if schedule['end_time'] is None else False
                     #    schedule['end_time'] = "18:00:00"
