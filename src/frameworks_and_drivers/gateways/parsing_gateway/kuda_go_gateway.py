@@ -81,7 +81,7 @@ class KudaGoGateway(BaseGateway):
             "contact": event.get("place", {}).get("phone", "-") if event['place'] is not None else "-",
             "date_start": self._get_event_start_date(event),
             "date_end": event.get("dates", [{}])[-1].get("end_date", ""),
-            "cost": event.get("price", "")
+            "cost": min(event.get("price", ""))
             if event["price"] is not None
             else 0,  # дублируется возможно
             "url": "",
@@ -185,11 +185,8 @@ class KudaGoGateway(BaseGateway):
                 schedules = event_details['dates'][0]['schedules']
                 schedule_list, schedule_string = [], ''
                 for n, schedule in enumerate(schedules):
-                    previous = 0
                     inter_string = ''
                     for d, days in enumerate(schedule['days_of_week']):
-                        first = days
-                        previous = 0
                         for day in days:
                             first = days[0]
                             status = False if len(days) == 1 else True
