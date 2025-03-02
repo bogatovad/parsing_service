@@ -185,11 +185,8 @@ class KudaGoGateway(BaseGateway):
                 schedules = event_details['dates'][0]['schedules']
                 schedule_list, schedule_string = [], ''
                 for n, schedule in enumerate(schedules):
-                    previous = 0
                     inter_string = ''
                     for d, days in enumerate(schedule['days_of_week']):
-                        first = days
-                        previous = 0
                         for day in days:
                             first = days[0]
                             status = False if len(days) == 1 else True
