@@ -30,16 +30,21 @@ class GetContentTimepadUseCase(AbstractUseCase):
         self.content_repo = content_repo
         self.cities = {"Нижний Новгород": "nn"}
 
-    def execute(self) -> list[ContentPydanticSchema]:
+    def execute(self) -> bool:
         logging.info("Fetching content from Timepad")
         raw_content: list[dict] = self.gateway.fetch_content()
-        contents = []
         unique_ids = self.content_repo.get_all_unique_ids()
+        unique_names = []
 
         for content in raw_content:
             try:
                 if not content:
                     continue
+
+                if content.get("name") in unique_names:
+                    continue
+                else:
+                    unique_names.append(content.get("name"))
 
                 logging.info(f"Processing content from Timepad {content}")
                 unique_id = str(content.get("id")) + "timepad"
@@ -48,6 +53,10 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     continue
 
                 try:
+                    # todo: кажется что сейчас картинка дублируетс часто.
+                    #  Надо разобраться с картинками в остальном вроде все ок.
+                    #  Перейти на save_one_content во всех юзкейсах
+                    logging.info(f"{content=}")
                     if "poster_image" in content:
                         image_url = "https:" + content.get("poster_image").get(
                             "uploadcare_url"
@@ -106,9 +115,8 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     city=self.cities.get(city),
                     unique_id=unique_id,
                 )
-                logging.info(f"Saving content to database {schema}")
-                contents.append(schema)
+                # logging.info(f"Saving content to database {schema}")
                 self.content_repo.save_one_content(schema)
             except:  # noqa: E722
                 continue
-        return contents
+        return True

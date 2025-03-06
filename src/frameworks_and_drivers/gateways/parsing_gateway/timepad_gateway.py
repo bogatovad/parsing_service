@@ -46,9 +46,6 @@ class TimepadGateway(BaseGateway):
             api_url = "https://api.timepad.ru/v1/events"
             logging.info(f"Получаем события с Timepad: {api_url} {params} {headers}")
             response = requests.get(api_url, params=params, headers=headers)
-            logging.info(
-                f"Получили ответ от Timepad: {response.status_code} {response.text}"
-            )
             response.raise_for_status()
 
             events.extend(response.json()["values"])
