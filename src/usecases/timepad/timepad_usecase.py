@@ -115,7 +115,7 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     city=self.cities.get(city),
                     unique_id=unique_id,
                 )
-                # logging.info(f"Saving content to database {schema}")
+                logging.info(f"Saving content to database {schema.name}")
                 self.content_repo.save_one_content(schema)
             except:  # noqa: E722
                 continue
