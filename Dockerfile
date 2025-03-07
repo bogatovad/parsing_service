@@ -20,3 +20,5 @@ RUN chmod +x /app
 
 # Определение команды по умолчанию
 CMD ["python", "/app/src/frameworks_and_drivers/django/parsing/manage.py"]
+
+#231321
