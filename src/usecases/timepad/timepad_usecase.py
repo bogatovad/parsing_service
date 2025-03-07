@@ -53,9 +53,6 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     continue
 
                 try:
-                    # todo: кажется что сейчас картинка дублируетс часто.
-                    #  Надо разобраться с картинками в остальном вроде все ок.
-                    #  Перейти на save_one_content во всех юзкейсах
                     logging.info(f"{content=}")
                     if "poster_image" in content:
                         image_url = "https:" + content.get("poster_image").get(
@@ -74,6 +71,8 @@ class GetContentTimepadUseCase(AbstractUseCase):
                     content_bytes = response.content
                 except AttributeError:
                     # todo: тут надо генерить картинку через кандинского.
+                    # todo: мы попадаем сюда из-за того чтобы картинка не пришла в апи
+                    # todo: значит можно и нужно ее генерировать самим.
                     content_bytes = b""
 
                 tags = [item.get("name") for item in content.get("categories")]
