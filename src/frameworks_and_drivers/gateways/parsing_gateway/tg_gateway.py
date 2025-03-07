@@ -20,7 +20,51 @@ class TelegramGateway(BaseGateway):
             "FeqdeNspIt0duhjs_CUD3PaQU3cQxTZGbWwWhtkZ_zAtHiLqpGyOfik3Cx8bmNefafMGuzhqAVk18uWu4u7wl3WEnLo9kCLH9e"
             "MuMEVgeDnUhfOpFKfplamZ509-awPQN7Ad0T7SvWMZ7wblXlOpNUqy1g8KS04lTl2he9ri_Ma0c="
         )
-        self.channels = [("@Events_nn_best", "nn")]
+        self.channels = [
+            ("@opera_nn", "nn"),
+            ("@moynizhny", "nn"),
+            ("@molodezh_no", "nn"),
+            ("@planetarium_nn", "nn"),
+            ("@nizhny800", "nn"),
+            ("@mynnovgorod", "nn"),
+            ("@rmfmuseum", "nn"),
+            ("@af_nn800", "nn"),
+            ("@nn_basket", "nn"),
+            ("@gorkoNN", "nn"),
+            ("@fudgid", "nn"),
+            ("@nizhny801", "nn"),
+            ("@runc_run", "nn"),
+            ("@domarchin", "nn"),
+            ("@NNafisha", "nn"),
+            ("@rupor_nnov", "nn"),
+            ("@kupnonn", "nn"),
+            ("@Events_nn_best", "nn"),
+            ("@nnevents_best", "nn"),
+            ("@silenceworkshop", "nn"),
+            ("@ninogda", "nn"),
+            ("@dvig_nn_afisha", "nn"),
+            ("@standupClub52", "nn"),
+            ("@zaotdih_nn", "nn"),
+            ("@mininuniver", "nn"),
+            ("@villagenn", "nn"),
+            ("@mishakudago", "nn"),
+            ("@runheroNN", "nn"),
+            ("@nnmuseum", "nn"),
+            ("@pushkinmuseum_volga", "nn"),
+            ("@nn_yarmarka", "nn"),
+            ("@kassirrunn", "nn"),
+            ("@matveeva_juli", "nn"),
+            ("@nn_philharmonic", "nn"),
+            ("@pivzavod_nn", "nn"),
+            ("@it52info", "nn"),
+            ("@dk_gaz", "nn"),
+            ("@ano_asiris", "nn"),
+            ("@recordcult", "nn"),
+            ("@terminal_nn", "nn"),
+            ("@arsenalmolod", "nn"),
+            ("@naukann", "nn"),
+            ("@shtab_kvartira_nn", "nn"),
+        ]
         self.client = TelegramClient(
             StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
         )
