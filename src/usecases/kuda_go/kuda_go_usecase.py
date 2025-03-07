@@ -48,7 +48,7 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 description=element.get("description", "No description available"),
                 tags=[processed_categories],
                 image=element.get("image", b"gg"),
-                contact=[{processed_link_name: element.get("url", {})}],
+                сontact=[{processed_link_name: element.get("url", {})}],
                 date_start=element.get("date_start", datetime.now()),
                 date_end=element.get("date_end", datetime.now()),
                 time=element.get("time", "00:00"),
@@ -57,7 +57,7 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 city=element.get("city", ""),
                 unique_id=element.get("name", "Default Name FROM KUDA GO"),
             )
-            print(content_element)
+
             result.append(content_element)
         self.content_repo.save_content(result)
         return result
