@@ -10,6 +10,7 @@ from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
 
+
 class GetContentKudaGoUseCase(AbstractUseCase):
     def __init__(
         self,
@@ -30,20 +31,17 @@ class GetContentKudaGoUseCase(AbstractUseCase):
         exists_unique_ids = self.content_repo.get_all_unique_ids()  # noqa: F841
 
         for element in raw_content:
-
-
             unique_id = element.get("name", "Default Name FROM KUDA GO")
 
             if unique_id in exists_unique_ids:
                 continue
-            
+
             processed_link_name = self.nlp_processor.generate_link_title(
                 element.get("description")
             )
             processed_categories = self.nlp_processor.determine_category(
                 element.get("description")
             )
-
 
             content_element = ContentPydanticSchema(
                 name=element.get("name", "Default Name FROM KUDA GO"),
@@ -63,14 +61,3 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             result.append(content_element)
         self.content_repo.save_content(result)
         return result
-
-'''
-if __name__ == '__main__':
-    this_class = GetContentKudaGoUseCase(gateway=KudaGoGateway(), content_repo=None, nlp_processor=None, file_repo=None)
-    rst = this_class.execute()
-    print(rst)
-    with open('kgd.json', 'w', encoding='utf-8') as kgd:
-        new = json.dumps(rst, ensure_ascii=False, indent=4)
-        kgd.write(new)
-    print('ready')
-'''
