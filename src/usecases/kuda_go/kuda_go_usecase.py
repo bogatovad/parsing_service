@@ -10,6 +10,7 @@ from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
 
+
 class GetContentKudaGoUseCase(AbstractUseCase):
     def __init__(
         self,
@@ -30,7 +31,6 @@ class GetContentKudaGoUseCase(AbstractUseCase):
         exists_unique_ids = self.content_repo.get_all_unique_ids()  # noqa: F841
 
         for element in raw_content:
-
             unique_id = element.get("name", "Default Name FROM KUDA GO")
 
             if unique_id in exists_unique_ids:
