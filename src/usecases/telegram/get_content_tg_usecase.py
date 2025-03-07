@@ -26,7 +26,7 @@ class GetContentTgUseCase(AbstractUseCase):
         self.content_repo = content_repo
         self.file_repo = file_repo
 
-    def execute(self) -> list[ContentPydanticSchema]:
+    def execute(self) -> bool:
         """
         Алгоритм:
          1. Получаем сырые данные из Telegram через gateway.
@@ -40,11 +40,11 @@ class GetContentTgUseCase(AbstractUseCase):
         raw_contents = self.gateway.fetch_content()
         logging.info(Message.END_GATEWAY_PROCESS)
         logging.info(f"Всего данных собрано {len(raw_contents)}")
+
         if not raw_contents:
-            return []
+            return False
 
         exists_unique_ids = self.content_repo.get_all_unique_ids()
-        results = []
 
         for index, raw in enumerate(raw_contents):
             unique_id = raw.get("event_id") + raw.get("channel")
@@ -67,11 +67,10 @@ class GetContentTgUseCase(AbstractUseCase):
 
                 if content:
                     logging.info(Message.CREATE_SCHEMA)
-                    results.append(content)
+                    logging.info(f"Save content from tg {content}")
+                    self.content_repo.save_one_content(content)
 
-        logging.info(f"Всего объектов создано {len(results)}")
-        self.content_repo.save_content(results)
-        return results
+        return True
 
     @staticmethod
     def _create_schema_from_event(event: dict) -> ContentPydanticSchema | None:
