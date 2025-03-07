@@ -62,9 +62,12 @@ class GetContentTimepadUseCase(AbstractUseCase):
                             "uploadcare_url"
                         )
                     else:
-                        if "logo_image" in content:
-                            image_url = "https:" + content.get("logo_image").get(
-                                "uploadcare_url"
+                        if "organization" in content:
+                            image_url = (
+                                "https:"
+                                + content["organization"]["logo_image"][
+                                    "uploadcare_url"
+                                ]
                             )
                     response = requests.get(image_url)
                     response.raise_for_status()
