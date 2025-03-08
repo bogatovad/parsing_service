@@ -168,7 +168,8 @@ class KudaGoGateway(BaseGateway):
         return b""
 
     def _parse_time(self, event_details : dict):
-        week_day = {1 : "Пн", 2 : "Вт", 3 : "Ср", 4 : "Чт", 5 : "Пт", 6 : "Сб", 7 : "Вс"}
+
+        week_day = {0 : "Пн", 1 : "Вт", 2 : "Ср", 3 : "Чт", 4 : "Пт", 5 : "Сб", 6 : "Вс"}
         timetable, schedule_list, schedule_t_string   = '', [], ''
         if len(event_details['dates']) == 1:
 

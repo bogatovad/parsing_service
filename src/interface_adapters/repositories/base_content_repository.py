@@ -13,6 +13,15 @@ class ContentRepositoryProtocol(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def save_one_content(self, contents: ContentPydanticSchema) -> None:
+        """
+        Метод для сохранения контента.
+
+        :param contents: Список контента.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_all_tags(self) -> list[str]:
         """
         Метод для получения всех тегов.
