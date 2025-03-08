@@ -1,3 +1,4 @@
+import re
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
@@ -26,8 +27,6 @@ class GetContentKudaGoUseCase(AbstractUseCase):
 
     def execute(self) -> list[ContentPydanticSchema]:
         raw_content = self.gateway.fetch_content()
-        result = []
-
         exists_unique_ids = self.content_repo.get_all_unique_ids()  # noqa: F841
 
         for element in raw_content:
@@ -39,16 +38,16 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             processed_link_name = self.nlp_processor.generate_link_title(
                 element.get("description")
             )
+            processed_link_name = re.sub(r'^"|"$', "", processed_link_name)
             processed_categories = self.nlp_processor.determine_category(
                 element.get("description")
             )
-
             content_element = ContentPydanticSchema(
                 name=element.get("name", "Default Name FROM KUDA GO"),
                 description=element.get("description", "No description available"),
                 tags=[processed_categories],
                 image=element.get("image", b"gg"),
-                сontact=[{processed_link_name: element.get("url", {})}],
+                contact=[{processed_link_name: element.get("url", "")}],
                 date_start=element.get("date_start", datetime.now()),
                 date_end=element.get("date_end", datetime.now()),
                 time=element.get("time", "00:00"),
@@ -57,7 +56,6 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 city=element.get("city", ""),
                 unique_id=element.get("name", "Default Name FROM KUDA GO"),
             )
+            self.content_repo.save_one_content(content_element)
 
-            result.append(content_element)
-        self.content_repo.save_content(result)
-        return result
+        return True
