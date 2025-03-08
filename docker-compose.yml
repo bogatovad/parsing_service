@@ -47,9 +47,13 @@ services:
   flower:
     image: mher/flower
     restart: always
-    command: celery --broker=redis://redis:6379/0 flower
     ports:
-      - "5555:5555"
+      - "9090:9090"
+    volumes:
+      - .:/code
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=9090
     depends_on:
       - celery-worker-parsing
 
