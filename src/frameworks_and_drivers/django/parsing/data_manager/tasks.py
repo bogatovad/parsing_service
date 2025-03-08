@@ -26,3 +26,6 @@ def parsing_data_from_tg_task():
 @shared_task
 def parsing_data_from_kudago_task():
     controller_kuda_go.get_content()
+
+
+controller_tg.get_content()

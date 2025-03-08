@@ -44,6 +44,16 @@ services:
       - environments/web.env
       - environments/minio.env
 
+  flower:
+    image: mher/flower
+    restart: always
+    command: celery --broker=redis://redis:6379/0 flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery-worker-parsing
+
 volumes:
   postgres_data:
   minio_data:
