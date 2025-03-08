@@ -15,10 +15,11 @@ logging.getLogger("telethon").setLevel(logging.WARNING)
 class TelegramGateway(BaseGateway):
     def __init__(self, client=None) -> None:
         string = (
-            "1ApWapzMBuyigOu4V36X4ov2onH-cJvmwdFTIMIiS7UAHaLVXYiVgx6X-CcGrSEIfFWjxuy7EcFvBWhPx-GVf-"
-            "RbnlrXnh3-pKIl8hbt0uAIA4HVeVQcvaOfD1DgxmAQ1-xUWifiN9tqKwKH0CNzeIspvyNpd8KFE1CtSwY4PWK9KD4NJjr"
-            "FeqdeNspIt0duhjs_CUD3PaQU3cQxTZGbWwWhtkZ_zAtHiLqpGyOfik3Cx8bmNefafMGuzhqAVk18uWu4u7wl3WEnLo9kCLH9e"
-            "MuMEVgeDnUhfOpFKfplamZ509-awPQN7Ad0T7SvWMZ7wblXlOpNUqy1g8KS04lTl2he9ri_Ma0c="
+            "1ApWapzMBu2BNT4SectEoG19zFpAL64hVdg9UNVgDoWYlX9kcpBqB3wy87A-_gQT"
+            "u5ZB1RWzyft7fBQI9S0tNryjIcpNGH7dnyU13fQN0gAwft_3gePRrh5oF2XgnMk_bN3"
+            "3bwI15TAMUSbmZQUlzwYmmS-NIDhH-YzTJ5YHY_UjYu3v7ME9UZ-oiFnvXzTL6_lN_KVeMw78"
+            "cqNguzy2W9JUHsw_zSu1qgHJwlT9a4IsIRgBOpK53eWOzMjZP0zuq39U4MGHoulGcGN-wKgYUhKP8zeD5Glxq_g"
+            "yWv0tvBq6COknZRtSSAacLhN5w9Re5NfQ53OCNDyIlBpdYhP9vmZIdRK-b2A8="
         )
         self.channels = [
             ("@opera_nn", "nn"),
@@ -110,7 +111,7 @@ class TelegramGateway(BaseGateway):
         events = []
         for channel, city in self.channels:
             logging.info(f"processing {channel}")
-            messages = self.client.get_messages(channel, limit=50)
+            messages = self.client.get_messages(channel, limit=5)
             logging.info("messages have been received.")
             for msg in messages:
                 if msg.message:
