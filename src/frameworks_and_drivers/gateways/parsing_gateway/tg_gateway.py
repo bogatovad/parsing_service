@@ -114,19 +114,22 @@ class TelegramGateway(BaseGateway):
             logging.info("messages have been received.")
             for msg in messages:
                 if msg.message:
-                    image_bytes = self.get_image_bytes(msg)  # noqa: F841
-                    links = self.get_links(msg)
-                    logging.info("links has been got.")
-                    events.append(
-                        {
-                            "event_id": str(msg.id),
-                            "channel": channel,
-                            "text": msg.message + "\n".join(links),
-                            "links": links,
-                            "date": msg.date.isoformat() if msg.date else None,
-                            "city": city,
-                            "image": image_bytes,
-                        }
-                    )
-                    logging.info("events has been processed.")
+                    try:
+                        image_bytes = self.get_image_bytes(msg)  # noqa: F841
+                        links = self.get_links(msg)
+                        logging.info("links has been got.")
+                        events.append(
+                            {
+                                "event_id": str(msg.id),
+                                "channel": channel,
+                                "text": msg.message + "\n".join(links),
+                                "links": links,
+                                "date": msg.date.isoformat() if msg.date else None,
+                                "city": city,
+                                "image": image_bytes,
+                            }
+                        )
+                        logging.info("events has been processed.")
+                    except:  # noqa: E722
+                        logging.info("error while processing message from tg.")
         return events
