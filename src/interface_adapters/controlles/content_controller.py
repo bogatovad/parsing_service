@@ -7,23 +7,40 @@ os.environ.setdefault(
 )
 
 
-class GetContentController:
+class GetContentTimepadController:
     def __init__(self, usecase_factory: UseCaseFactory):
         self.usecase_factory = usecase_factory
 
     def get_content(self) -> bool:
-        """Get content from different sources"""
+        """Get content from Timepad sources"""
         try:
-            content_tg = self.usecase_factory.get_tg_content_usecase().execute()
-            # content_yandex = self.usecase_factory.get_yandex_afisha_content_usecase().execute()
-            content_kuda_go = (
-                self.usecase_factory.get_kuda_go_content_usecase().execute()
-            )
-            # content_timepad = self.usecase_factory.get_timepad_content_usecase().execute()
-            print(f"{content_tg=}")
-            # print(f"{content_yandex=}")
-            print(f"{content_kuda_go=}")
-            # print(f"{content_timepad=}")
+            self.usecase_factory.get_timepad_content_usecase().execute()
+            return True
+        except Exception:
+            raise RunUsecaseException
+
+
+class GetContentTgController:
+    def __init__(self, usecase_factory: UseCaseFactory):
+        self.usecase_factory = usecase_factory
+
+    def get_content(self) -> bool:
+        """Get content from Tg sources"""
+        try:
+            self.usecase_factory.get_tg_content_usecase().execute()
+            return True
+        except Exception:
+            raise RunUsecaseException
+
+
+class GetContentKudaGoController:
+    def __init__(self, usecase_factory: UseCaseFactory):
+        self.usecase_factory = usecase_factory
+
+    def get_content(self) -> bool:
+        """Get content from KudaGo sources"""
+        try:
+            self.usecase_factory.get_kuda_go_content_usecase().execute()
             return True
         except Exception:
             raise RunUsecaseException
