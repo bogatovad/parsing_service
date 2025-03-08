@@ -163,6 +163,6 @@ CELERY_BEAT_SCHEDULE = {
     },
     "example-task-kudago-10-10am": {
         "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_kudago_task",
-        "schedule": crontab(hour=11, minute=54),
+        "schedule": crontab(hour=11, minute=57),
     },
 }
