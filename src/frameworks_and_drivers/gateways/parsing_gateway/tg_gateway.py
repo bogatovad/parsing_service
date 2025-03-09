@@ -15,12 +15,57 @@ logging.getLogger("telethon").setLevel(logging.WARNING)
 class TelegramGateway(BaseGateway):
     def __init__(self, client=None) -> None:
         string = (
-            "1ApWapzMBuyigOu4V36X4ov2onH-cJvmwdFTIMIiS7UAHaLVXYiVgx6X-CcGrSEIfFWjxuy7EcFvBWhPx-GVf-"
-            "RbnlrXnh3-pKIl8hbt0uAIA4HVeVQcvaOfD1DgxmAQ1-xUWifiN9tqKwKH0CNzeIspvyNpd8KFE1CtSwY4PWK9KD4NJjr"
-            "FeqdeNspIt0duhjs_CUD3PaQU3cQxTZGbWwWhtkZ_zAtHiLqpGyOfik3Cx8bmNefafMGuzhqAVk18uWu4u7wl3WEnLo9kCLH9e"
-            "MuMEVgeDnUhfOpFKfplamZ509-awPQN7Ad0T7SvWMZ7wblXlOpNUqy1g8KS04lTl2he9ri_Ma0c="
+            "1ApWapzMBu2BNT4SectEoG19zFpAL64hVdg9UNVgDoWYlX9kcpBqB3wy87A-_gQT"
+            "u5ZB1RWzyft7fBQI9S0tNryjIcpNGH7dnyU13fQN0gAwft_3gePRrh5oF2XgnMk_bN3"
+            "3bwI15TAMUSbmZQUlzwYmmS-NIDhH-YzTJ5YHY_UjYu3v7ME9UZ-oiFnvXzTL6_lN_KVeMw78"
+            "cqNguzy2W9JUHsw_zSu1qgHJwlT9a4IsIRgBOpK53eWOzMjZP0zuq39U4MGHoulGcGN-wKgYUhKP8zeD5Glxq_g"
+            "yWv0tvBq6COknZRtSSAacLhN5w9Re5NfQ53OCNDyIlBpdYhP9vmZIdRK-b2A8="
         )
-        self.channels = [("@Events_nn_best", "nn")]
+        self.channels = [
+            ("@opera_nn", "nn"),
+            ("@moynizhny", "nn"),
+            ("@molodezh_no", "nn"),
+            ("@planetarium_nn", "nn"),
+            ("@nizhny800", "nn"),
+            ("@mynnovgorod", "nn"),
+            ("@rmfmuseum", "nn"),
+            ("@af_nn800", "nn"),
+            ("@nn_basket", "nn"),
+            ("@gorkoNN", "nn"),
+            ("@fudgid", "nn"),
+            ("@nizhny801", "nn"),
+            ("@runc_run", "nn"),
+            ("@domarchin", "nn"),
+            ("@NNafisha", "nn"),
+            ("@rupor_nnov", "nn"),
+            ("@kupnonn", "nn"),
+            ("@Events_nn_best", "nn"),
+            ("@nnevents_best", "nn"),
+            ("@silenceworkshop", "nn"),
+            ("@ninogda", "nn"),
+            ("@dvig_nn_afisha", "nn"),
+            ("@standupClub52", "nn"),
+            ("@zaotdih_nn", "nn"),
+            ("@mininuniver", "nn"),
+            ("@villagenn", "nn"),
+            ("@mishakudago", "nn"),
+            ("@runheroNN", "nn"),
+            ("@nnmuseum", "nn"),
+            ("@pushkinmuseum_volga", "nn"),
+            ("@nn_yarmarka", "nn"),
+            ("@kassirrunn", "nn"),
+            ("@matveeva_juli", "nn"),
+            ("@nn_philharmonic", "nn"),
+            ("@pivzavod_nn", "nn"),
+            ("@it52info", "nn"),
+            ("@dk_gaz", "nn"),
+            ("@ano_asiris", "nn"),
+            ("@recordcult", "nn"),
+            ("@terminal_nn", "nn"),
+            ("@arsenalmolod", "nn"),
+            ("@naukann", "nn"),
+            ("@shtab_kvartira_nn", "nn"),
+        ]
         self.client = TelegramClient(
             StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
         )
@@ -66,23 +111,26 @@ class TelegramGateway(BaseGateway):
         events = []
         for channel, city in self.channels:
             logging.info(f"processing {channel}")
-            messages = self.client.get_messages(channel, limit=50)
+            messages = self.client.get_messages(channel, limit=5)
             logging.info("messages have been received.")
             for msg in messages:
                 if msg.message:
-                    image_bytes = self.get_image_bytes(msg)  # noqa: F841
-                    links = self.get_links(msg)
-                    logging.info("links has been got.")
-                    events.append(
-                        {
-                            "event_id": str(msg.id),
-                            "channel": channel,
-                            "text": msg.message + "\n".join(links),
-                            "links": links,
-                            "date": msg.date.isoformat() if msg.date else None,
-                            "city": city,
-                            "image": image_bytes,
-                        }
-                    )
-                    logging.info("events has been processed.")
+                    try:
+                        image_bytes = self.get_image_bytes(msg)  # noqa: F841
+                        links = self.get_links(msg)
+                        logging.info("links has been got.")
+                        events.append(
+                            {
+                                "event_id": str(msg.id),
+                                "channel": channel,
+                                "text": msg.message + "\n".join(links),
+                                "links": links,
+                                "date": msg.date.isoformat() if msg.date else None,
+                                "city": city,
+                                "image": image_bytes,
+                            }
+                        )
+                        logging.info("events has been processed.")
+                    except:  # noqa: E722
+                        logging.info("error while processing message from tg.")
         return events

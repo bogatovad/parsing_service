@@ -44,6 +44,19 @@ services:
       - environments/web.env
       - environments/minio.env
 
+  flower:
+    image: mher/flower
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - .:/code
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=9090
+    depends_on:
+      - celery-worker-parsing
+
 volumes:
   postgres_data:
   minio_data:
