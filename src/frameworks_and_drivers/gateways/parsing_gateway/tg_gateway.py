@@ -38,33 +38,33 @@ class TelegramGateway(BaseGateway):
             ("@domarchin", "nn"),
             ("@NNafisha", "nn"),
             ("@rupor_nnov", "nn"),
-            ("@kupnonn", "nn"),
+            # ("@kupnonn", "nn"),
             ("@Events_nn_best", "nn"),
             ("@nnevents_best", "nn"),
-            ("@silenceworkshop", "nn"),
-            ("@ninogda", "nn"),
-            ("@dvig_nn_afisha", "nn"),
-            ("@standupClub52", "nn"),
-            ("@zaotdih_nn", "nn"),
-            ("@mininuniver", "nn"),
-            ("@villagenn", "nn"),
-            ("@mishakudago", "nn"),
-            ("@runheroNN", "nn"),
-            ("@nnmuseum", "nn"),
-            ("@pushkinmuseum_volga", "nn"),
-            ("@nn_yarmarka", "nn"),
-            ("@kassirrunn", "nn"),
-            ("@matveeva_juli", "nn"),
-            ("@nn_philharmonic", "nn"),
-            ("@pivzavod_nn", "nn"),
-            ("@it52info", "nn"),
-            ("@dk_gaz", "nn"),
-            ("@ano_asiris", "nn"),
-            ("@recordcult", "nn"),
-            ("@terminal_nn", "nn"),
-            ("@arsenalmolod", "nn"),
+            # ("@silenceworkshop", "nn"),
+            # ("@ninogda", "nn"),
+            # ("@dvig_nn_afisha", "nn"),
+            # ("@standupClub52", "nn"),
+            # ("@zaotdih_nn", "nn"),
+            # ("@mininuniver", "nn"),
+            # ("@villagenn", "nn"),
+            # ("@mishakudago", "nn"),
+            # ("@runheroNN", "nn"),
+            # ("@nnmuseum", "nn"),
+            # ("@pushkinmuseum_volga", "nn"),
+            # ("@nn_yarmarka", "nn"),
+            # ("@kassirrunn", "nn"),
+            # ("@matveeva_juli", "nn"),
+            # ("@nn_philharmonic", "nn"),
+            # ("@pivzavod_nn", "nn"),
+            # ("@it52info", "nn"),
+            # ("@dk_gaz", "nn"),
+            # ("@ano_asiris", "nn"),
+            # ("@recordcult", "nn"),
+            # ("@terminal_nn", "nn"),
+            # ("@arsenalmolod", "nn"),
             ("@naukann", "nn"),
-            ("@shtab_kvartira_nn", "nn"),
+            # ("@shtab_kvartira_nn", "nn"),
         ]
         self.client = TelegramClient(
             StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
@@ -111,7 +111,7 @@ class TelegramGateway(BaseGateway):
         events = []
         for channel, city in self.channels:
             logging.info(f"processing {channel}")
-            messages = self.client.get_messages(channel, limit=5)
+            messages = self.client.get_messages(channel, limit=10)
             logging.info("messages have been received.")
             for msg in messages:
                 if msg.message:
