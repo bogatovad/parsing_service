@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import base64
+from datetime import datetime
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
 from interface_adapters.presenters.schemas import ContentPydanticSchema
@@ -67,14 +68,23 @@ class GetContentTgUseCase(AbstractUseCase):
                 cost = int(cost_raw)
             except (ValueError, TypeError):
                 cost = 0
+
+            date_start = event.get("data_start", datetime.now())
+            date_end = event.get("data_end", datetime.now())
+
+            # Если текущая дата больше, чем дата окончания, событие считается неактуальным.
+            if datetime.now() > date_end:
+                logging.info("Мероприятие уже завершилось. Пропускаем добавление.")
+                return None
+
             return ContentPydanticSchema(
                 name=event.get("name", "Default Name FROM TG"),
                 description=event.get("description", "No description available"),
                 tags=event.get("category", []),
                 image=event.get("image", b""),
                 contact=event.get("contact", [{}]),
-                date_start=event.get("data_start", datetime.now()),
-                date_end=event.get("data_end", datetime.now()),
+                date_start=date_start,
+                date_end=date_end,
                 time=event.get("time", "00:00"),
                 location=event.get("location", "Unknown"),
                 cost=cost,
