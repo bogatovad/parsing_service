@@ -69,13 +69,20 @@ class GetContentTgUseCase(AbstractUseCase):
             except (ValueError, TypeError):
                 cost = 0
 
-            date_start = event.get("data_start", datetime.now())
-            date_end = event.get("data_end", datetime.now())
+            date_start = event.get("data_start",datetime.now())
+            date_end = event.get("data_end", "")
 
-            # Если текущая дата больше, чем дата окончания, событие считается неактуальным.
-            if datetime.now() > date_end:
-                logging.info("Мероприятие уже завершилось. Пропускаем добавление.")
-                return None
+            current_time = datetime.now()
+
+            if date_end:
+                if not (date_start <= current_time <= date_end):
+                    logging.info("Мероприятие не актуально: текущая дата вне интервала [date_start, date_end].")
+                    return None
+            else:
+                # Если задана только дата начала, проверяем, что она уже наступила
+                if not (date_start <= current_time):
+                    logging.info("Мероприятие не актуально: текущая дата позже даты начала.")
+                    return None
 
             return ContentPydanticSchema(
                 name=event.get("name", "Default Name FROM TG"),
