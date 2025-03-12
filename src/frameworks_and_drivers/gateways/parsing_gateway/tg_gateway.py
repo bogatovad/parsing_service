@@ -1,12 +1,13 @@
 import logging
 from io import BytesIO
-
 from telethon.sync import TelegramClient
 from telethon.tl.types import MessageEntityUrl, MessageEntityTextUrl
-
-from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from telethon.sessions import StringSession
 
+from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
+
+import easyocr  # <-- Добавлено
+from PIL import Image  # <-- Добавлено
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("telethon").setLevel(logging.WARNING)
@@ -21,6 +22,8 @@ class TelegramGateway(BaseGateway):
             "cqNguzy2W9JUHsw_zSu1qgHJwlT9a4IsIRgBOpK53eWOzMjZP0zuq39U4MGHoulGcGN-wKgYUhKP8zeD5Glxq_g"
             "yWv0tvBq6COknZRtSSAacLhN5w9Re5NfQ53OCNDyIlBpdYhP9vmZIdRK-b2A8="
         )
+
+        # Каналы оставляем как есть
         self.channels = [
             ("@opera_nn", "nn"),
             ("@moynizhny", "nn"),
@@ -38,38 +41,18 @@ class TelegramGateway(BaseGateway):
             ("@domarchin", "nn"),
             ("@NNafisha", "nn"),
             ("@rupor_nnov", "nn"),
-            # ("@kupnonn", "nn"),
             ("@Events_nn_best", "nn"),
             ("@nnevents_best", "nn"),
-            # ("@silenceworkshop", "nn"),
-            # ("@ninogda", "nn"),
-            # ("@dvig_nn_afisha", "nn"),
-            # ("@standupClub52", "nn"),
-            # ("@zaotdih_nn", "nn"),
-            # ("@mininuniver", "nn"),
-            # ("@villagenn", "nn"),
-            # ("@mishakudago", "nn"),
-            # ("@runheroNN", "nn"),
-            # ("@nnmuseum", "nn"),
-            # ("@pushkinmuseum_volga", "nn"),
-            # ("@nn_yarmarka", "nn"),
-            # ("@kassirrunn", "nn"),
-            # ("@matveeva_juli", "nn"),
-            # ("@nn_philharmonic", "nn"),
-            # ("@pivzavod_nn", "nn"),
-            # ("@it52info", "nn"),
-            # ("@dk_gaz", "nn"),
-            # ("@ano_asiris", "nn"),
-            # ("@recordcult", "nn"),
-            # ("@terminal_nn", "nn"),
-            # ("@arsenalmolod", "nn"),
             ("@naukann", "nn"),
-            # ("@shtab_kvartira_nn", "nn"),
         ]
+        # Инициализируем клиент Телеграм
         self.client = TelegramClient(
             StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
         )
         self._run_auth()
+
+        # Инициализируем OCR
+        self.ocr_reader = easyocr.Reader(['ru', 'en'], gpu=False)
 
     def _run_auth(self) -> None:
         self.client.connect()
@@ -87,7 +70,8 @@ class TelegramGateway(BaseGateway):
                         if hasattr(entity, "url") and entity.url
                         else msg.message[entity.offset : entity.offset + entity.length]
                     )
-                    if url.find("https://t.me") != -1:
+                    # Игнорируем служебные t.me-ссылки
+                    if "https://t.me" in url:
                         continue
                     links.append(url)
         return links
@@ -104,26 +88,63 @@ class TelegramGateway(BaseGateway):
                 logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
         return image_bytes
 
+    def _extract_text_from_image(self, image_bytes: bytes) -> str:
+        """
+        Извлекает текст с помощью easyocr и возвращает его
+        с префиксом ocr_prefix'.
+        """
+        ocr_prefix = "[Далее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то дополнительная информация - адрес, телефон, цена или что-то ещё ценное, чего нет в тексте, то добавь это в json. Если информация дублируется по разному, то в приоритете данные из текста поста.]"
+        if not image_bytes:
+            return ""
+
+        try:
+            pil_image = Image.open(BytesIO(image_bytes))
+            result = self.ocr_reader.readtext(pil_image)
+            if not result:
+                return ""
+            # Склеиваем все распознанные куски текста для проверки ценности
+            recognized_text = "\n".join([item[1].strip() for item in result if item[1].strip()])
+            if not recognized_text:
+                return ""
+            return f"\n{ocr_prefix}\n{recognized_text}"
+        except Exception as e:
+            logging.error(f"Ошибка OCR: {e}", exc_info=True)
+            return ""
+
     def fetch_content(self) -> list[dict]:
         """
-        Получает сообщения из указанных каналов.
+        Получает сообщения из указанных каналов, добавляет
+        к сообщению ссылку и текст, распознанный из картинки.
         """
         events = []
         for channel, city in self.channels:
             logging.info(f"processing {channel}")
             messages = self.client.get_messages(channel, limit=10)
             logging.info("messages have been received.")
+
             for msg in messages:
                 if msg.message:
                     try:
-                        image_bytes = self.get_image_bytes(msg)  # noqa: F841
+                        image_bytes = self.get_image_bytes(msg)
                         links = self.get_links(msg)
                         logging.info("links has been got.")
+
+                        # Доп. обработка картинки с помощью OCR
+                        pic_text = self._extract_text_from_image(image_bytes)
+
+                        # Формируем итоговый текст
+                        combined_text = msg.message
+                        if links:
+                            combined_text += "\n" + "\n".join(links)
+                        # Добавляем распознанный текст
+                        if pic_text:
+                            combined_text += pic_text
+
                         events.append(
                             {
                                 "event_id": str(msg.id),
                                 "channel": channel,
-                                "text": msg.message + "\n".join(links),
+                                "text": combined_text,
                                 "links": links,
                                 "date": msg.date.isoformat() if msg.date else None,
                                 "city": city,
@@ -131,6 +152,7 @@ class TelegramGateway(BaseGateway):
                             }
                         )
                         logging.info("events has been processed.")
-                    except:  # noqa: E722
-                        logging.info("error while processing message from tg.")
+                    except Exception as e:
+                        logging.error(f"error while processing message from tg: {e}")
+
         return events
