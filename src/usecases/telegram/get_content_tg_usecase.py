@@ -1,15 +1,16 @@
 from datetime import datetime
 import logging
-import base64
-from datetime import datetime
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
+from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
+    NLPProcessorBase,
+)
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
 from usecases.telegram.messages import Message
 from usecases.telegram.kandinsky_api import generate_image_with_kandinsky
 
 logging.basicConfig(level=logging.INFO)
+
 
 class GetContentTgUseCase(AbstractUseCase):
     def __init__(
@@ -41,7 +42,7 @@ class GetContentTgUseCase(AbstractUseCase):
             if not processed_result:
                 continue
 
-            image_data = raw.get("image") or b""
+            image_data = raw.get("image") or b""  # noqa: F841
 
             for event in processed_result:
                 unique_id = event.get("name", "") + raw.get("channel", "")
@@ -50,7 +51,9 @@ class GetContentTgUseCase(AbstractUseCase):
 
                 if "image" not in event or not event["image"]:
                     # Если изображение отсутствует – генерируем его через Kandinsky
-                    event["image"] = generate_image_with_kandinsky(f"{event.get('name', '')} {event.get('description', '')}")
+                    event["image"] = generate_image_with_kandinsky(
+                        f"{event.get('name', '')} {event.get('description', '')}"
+                    )
 
                 content = self._create_schema_from_event(event, unique_id)
                 if content:
@@ -61,7 +64,9 @@ class GetContentTgUseCase(AbstractUseCase):
         return True
 
     @staticmethod
-    def _create_schema_from_event(event: dict, unique_id: str) -> ContentPydanticSchema | None:
+    def _create_schema_from_event(
+        event: dict, unique_id: str
+    ) -> ContentPydanticSchema | None:
         try:
             cost_raw = event.get("cost", 0)
             try:
@@ -69,19 +74,23 @@ class GetContentTgUseCase(AbstractUseCase):
             except (ValueError, TypeError):
                 cost = 0
 
-            date_start = event.get("data_start",datetime.now())
+            date_start = event.get("data_start", datetime.now())
             date_end = event.get("data_end", "")
 
             current_time = datetime.now()
 
             if date_end:
                 if not (date_start <= current_time <= date_end):
-                    logging.info("Мероприятие не актуально: текущая дата вне интервала [date_start, date_end].")
+                    logging.info(
+                        "Мероприятие не актуально: текущая дата вне интервала [date_start, date_end]."
+                    )
                     return None
             else:
                 # Если задана только дата начала, проверяем, что она уже наступила
                 if not (date_start <= current_time):
-                    logging.info("Мероприятие не актуально: текущая дата позже даты начала.")
+                    logging.info(
+                        "Мероприятие не актуально: текущая дата позже даты начала."
+                    )
                     return None
 
             return ContentPydanticSchema(
