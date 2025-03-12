@@ -52,7 +52,7 @@ class TelegramGateway(BaseGateway):
         self._run_auth()
 
         # Инициализируем OCR
-        self.ocr_reader = easyocr.Reader(['ru', 'en'], gpu=False)
+        self.ocr_reader = easyocr.Reader(["ru", "en"], gpu=False)
 
     def _run_auth(self) -> None:
         self.client.connect()
@@ -93,17 +93,25 @@ class TelegramGateway(BaseGateway):
         Извлекает текст с помощью easyocr и возвращает его
         с префиксом ocr_prefix'.
         """
-        ocr_prefix = "[Далее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то дополнительная информация - адрес, телефон, цена или что-то ещё ценное, чего нет в тексте, то добавь это в json. Если информация дублируется по разному, то в приоритете данные из текста поста.]"
+        ocr_prefix = (
+            "[Далее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то "
+            "дополнительная информация - адрес, телефон, цена или что-то ещё ценное, чего нет в тексте, то "
+            "добавь это в json. Если информация дублируется по разному, то в приоритете данные из "
+            "текста поста.]"
+        )
         if not image_bytes:
             return ""
 
         try:
             pil_image = Image.open(BytesIO(image_bytes))
             result = self.ocr_reader.readtext(pil_image)
+
             if not result:
                 return ""
-            # Склеиваем все распознанные куски текста для проверки ценности
-            recognized_text = "\n".join([item[1].strip() for item in result if item[1].strip()])
+
+            recognized_text = "\n".join(
+                [item[1].strip() for item in result if item[1].strip()]
+            )
             if not recognized_text:
                 return ""
             return f"\n{ocr_prefix}\n{recognized_text}"
@@ -128,15 +136,12 @@ class TelegramGateway(BaseGateway):
                         image_bytes = self.get_image_bytes(msg)
                         links = self.get_links(msg)
                         logging.info("links has been got.")
-
-                        # Доп. обработка картинки с помощью OCR
                         pic_text = self._extract_text_from_image(image_bytes)
-
-                        # Формируем итоговый текст
                         combined_text = msg.message
+
                         if links:
                             combined_text += "\n" + "\n".join(links)
-                        # Добавляем распознанный текст
+
                         if pic_text:
                             combined_text += pic_text
 
