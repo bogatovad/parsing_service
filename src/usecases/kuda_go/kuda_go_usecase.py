@@ -34,7 +34,7 @@ class GetContentKudaGoUseCase(AbstractUseCase):
 
             if unique_id in exists_unique_ids:
                 continue
-            
+
             processed_link_name = self.nlp_processor.generate_link_title(
                 element.get("description")
             )
