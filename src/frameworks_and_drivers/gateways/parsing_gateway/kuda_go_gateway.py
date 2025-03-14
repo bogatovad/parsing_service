@@ -71,7 +71,6 @@ class KudaGoGateway(BaseGateway):
 
         #Первая буква имени - заглавная
         event['title'] = f"{event['title'][0].upper()}{event['title'][1:]}"
-        #input(event['price'])
 
         current_event = {
             "id": event.get("id", "-"),
@@ -170,10 +169,9 @@ class KudaGoGateway(BaseGateway):
 
     def _parse_time(self, event_details : dict):
 
-        week_day = {0 : "Пн", 1 : "Вт", 2 : "Ср", 3 : "Чт", 4 : "Пт", 5 : "Сб", 6 : "Вс"}
+        week_day = {0 : "пн", 1 : "вт", 2 : "ср", 3 : "чт", 4 : "пт", 5 : "сб", 6 : "вс"}
         timetable, schedule_list, schedule_t_string   = '', [], ''
-        if event_details['id'] == '200189':
-            input(len(event_details['dates']))
+
         if len(event_details['dates']) == 1:
 
             use_schedule = event_details['dates'][0]['use_place_schedule']
@@ -227,11 +225,6 @@ class KudaGoGateway(BaseGateway):
                                     last = day
                                     if not inter_string:
                                         inter_string = f"{week_day[first]} - {week_day[last]}"
-                                    #elif not f"{week_day[first]} - {week_day[last]}" in inter_string:
-                                    #    inter_string = f"{inter_string}\n{week_day[first]} - {week_day[last]}"
-                                    #else:
-                                    #    print(inter_string)
-                                    #    continue
                                     break
 
                     if len(days) == 1:
@@ -292,17 +285,19 @@ class KudaGoGateway(BaseGateway):
 
                             if schedule_list != []:
                                 # что если уже присутствует в днях недели
+                                what_presents = schedule_t_string.split(': ')[0]
+                                already_present_in_list = True if True in [True for this_string in schedule_list if what_presents in this_string] else False
+
                                 already_present = True if True in [True for day in week_day.values() if
-                                                                   day in schedule_t_string] else False
+                                                                   day in schedule_t_string and already_present_in_list] else False
 
                                 if schedule_t_string not in schedule_list and not already_present:
-                                    schedule_list.append(schedule_t_string)
+                                    schedule_list.append(schedule_t_string.lower())
                                 elif schedule_t_string not in schedule_list and already_present:
                                     what_presents = schedule_t_string.split(': ')[0]
                                     current_substring = [el.split(': ') for el in schedule_list if what_presents in el][0][1]
                                     index_position = [True for el in schedule_list if what_presents in el].index(True)
                                     to_append = schedule_t_string.split(': ')[1]
-                                    print(to_append)
                                     schedule_list[index_position] = f'{what_presents}: {current_substring}, {to_append}'
                             else:
                                 schedule_list.append(schedule_t_string.lower())
@@ -331,7 +326,7 @@ class KudaGoGateway(BaseGateway):
                         schedule_list.append(schedule_t_string.lower())
 
                 if len(schedule_list) == 1 and not event_details['dates'][0]['is_endless']:
-                    print(event_details['id'])
+
                     schedule_list[0] = schedule_list[0].split(' с ')[1] \
                         if ' с ' in schedule_list[0] \
                         else schedule_list[0].split(' ')[1]
@@ -405,3 +400,4 @@ class KudaGoGateway(BaseGateway):
                     logging.error(f"Ошибка при запросе событий: {e}")
                     break
         return events
+
