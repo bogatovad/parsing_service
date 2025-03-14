@@ -11,9 +11,6 @@ from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
 
-from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway import KudaGoGateway
-import  json
-
 
 class GetContentKudaGoUseCase(AbstractUseCase):
     def __init__(
