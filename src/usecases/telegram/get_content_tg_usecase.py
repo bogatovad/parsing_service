@@ -47,11 +47,6 @@ class GetContentTgUseCase(AbstractUseCase):
         exists_unique_ids = self.content_repo.get_all_unique_ids()
 
         for index, raw in enumerate(raw_contents):
-            unique_id = raw.get("event_id") + raw.get("channel")
-
-            if unique_id in exists_unique_ids:
-                continue
-
             processed_result = self.nlp_processor.process_post(raw)
 
             if not processed_result:
@@ -60,10 +55,15 @@ class GetContentTgUseCase(AbstractUseCase):
             image_data = raw.get("image") or b""
 
             for event in processed_result:
+                unique_id = event.get("name") + raw.get("channel")
+
+                if unique_id in exists_unique_ids:
+                    continue
+
                 if "image" not in event or event.get("image") is None:
                     event["image"] = image_data
 
-                content = self._create_schema_from_event(event)
+                content = self._create_schema_from_event(event, unique_id)
 
                 if content:
                     logging.info(Message.CREATE_SCHEMA)
@@ -73,14 +73,15 @@ class GetContentTgUseCase(AbstractUseCase):
         return True
 
     @staticmethod
-    def _create_schema_from_event(event: dict) -> ContentPydanticSchema | None:
+    def _create_schema_from_event(
+        event: dict, unique_id: str
+    ) -> ContentPydanticSchema | None:
         try:
             cost_raw = event.get("cost", 0)
             try:
                 cost = int(cost_raw)
             except (ValueError, TypeError):
                 cost = 0
-            unique_id = event.get("event_id") + event.get("channel")
             return ContentPydanticSchema(
                 name=event.get("name", "Default Name FROM TG"),
                 description=event.get("description", "No description available"),
