@@ -6,8 +6,8 @@ from telethon.sessions import StringSession
 
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 
-import easyocr  # <-- Добавлено
-from PIL import Image  # <-- Добавлено
+import easyocr
+from PIL import Image
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("telethon").setLevel(logging.WARNING)
@@ -23,7 +23,6 @@ class TelegramGateway(BaseGateway):
             "yWv0tvBq6COknZRtSSAacLhN5w9Re5NfQ53OCNDyIlBpdYhP9vmZIdRK-b2A8="
         )
 
-        # Каналы оставляем как есть
         self.channels = [
             ("@opera_nn", "nn"),
             ("@moynizhny", "nn"),
@@ -45,7 +44,6 @@ class TelegramGateway(BaseGateway):
             ("@nnevents_best", "nn"),
             ("@naukann", "nn"),
         ]
-        # Инициализируем клиент Телеграм
         self.client = TelegramClient(
             StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
         )
@@ -68,47 +66,58 @@ class TelegramGateway(BaseGateway):
                     url = (
                         entity.url
                         if hasattr(entity, "url") and entity.url
-                        else msg.message[entity.offset : entity.offset + entity.length]
+                        else msg.message[entity.offset: entity.offset + entity.length]
                     )
-                    # Игнорируем служебные t.me-ссылки
+                    # Игнорируем служебные ссылки t.me
                     if "https://t.me" in url:
                         continue
                     links.append(url)
         return links
 
+    def is_image_message(self, msg) -> bool:
+        """
+        Проверяем, является ли вложение сообщением с изображением.
+        """
+        if msg.photo:
+            return True
+        if msg.document and getattr(msg.document, 'mime_type', None):
+            # Например "image/jpeg", "image/png" и т.п.
+            return msg.document.mime_type.startswith("image/")
+        return False
+
     def get_image_bytes(self, msg) -> bytes:
-        image_bytes = None
-        if msg.media:
-            try:
-                file_obj = BytesIO()
-                self.client.download_media(msg.media, file=file_obj)
-                image_bytes = file_obj.getvalue()
-                logging.info("image has been downloaded.")
-            except Exception as e:
-                logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
+        """
+        Скачиваем байты изображения из сообщения, если оно изображение.
+        """
+        image_bytes = b""
+        try:
+            file_obj = BytesIO()
+            self.client.download_media(msg.media, file=file_obj)
+            image_bytes = file_obj.getvalue()
+            logging.info("Изображение скачано успешно.")
+        except Exception as e:
+            logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
         return image_bytes
 
     def _extract_text_from_image(self, image_bytes: bytes) -> str:
         """
         Извлекает текст с помощью easyocr и возвращает его
-        с префиксом ocr_prefix'.
+        с префиксом, если распознанный текст не пуст.
         """
-        ocr_prefix = "[Далее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то дополнительная информация - адрес, телефон, цена или что-то ещё ценное, чего нет в тексте, то добавь это в json. Если информация дублируется по разному, то в приоритете данные из текста поста.]"
+        ocr_prefix = "\n\nДалее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то ценная информация - адрес, телефон, дата, время, цена или что-то ещё важное для нашего анализа, чего нет в основном тексте, то добавь это в json. Если информация дублируется по разному, то в приоритете данные из текста поста. ]"
         if not image_bytes:
             return ""
-
         try:
             pil_image = Image.open(BytesIO(image_bytes))
             result = self.ocr_reader.readtext(pil_image)
             if not result:
                 return ""
-            # Склеиваем все распознанные куски текста для проверки ценности
-            recognized_text = "\n".join([item[1].strip() for item in result if item[1].strip()])
-            if not recognized_text:
+            recognized_text = "\n".join([item[1] for item in result]) 
+            if not recognized_text.strip():
                 return ""
             return f"\n{ocr_prefix}\n{recognized_text}"
         except Exception as e:
-            logging.error(f"Ошибка OCR: {e}", exc_info=True)
+            logging.error(f"Ошибка при распознавании OCR (файл может не быть изображением): {e}", exc_info=True)
             return ""
 
     def fetch_content(self) -> list[dict]:
@@ -118,41 +127,49 @@ class TelegramGateway(BaseGateway):
         """
         events = []
         for channel, city in self.channels:
-            logging.info(f"processing {channel}")
+            logging.info(f"Обрабатываем канал: {channel}")
             messages = self.client.get_messages(channel, limit=10)
-            logging.info("messages have been received.")
+            logging.info("Сообщения успешно получены.")
 
             for msg in messages:
-                if msg.message:
-                    try:
+                if not msg.message:
+                    continue
+
+                try:
+                    links = self.get_links(msg)
+                    logging.info("Ссылки извлечены.")
+
+                    # Собираем текст сообщений
+                    combined_text = msg.message
+                    if links:
+                        combined_text += "\n" + "\n".join(links)
+
+                    # Проверяем, является ли медиа изображением
+                    if self.is_image_message(msg):
                         image_bytes = self.get_image_bytes(msg)
-                        links = self.get_links(msg)
-                        logging.info("links has been got.")
-
-                        # Доп. обработка картинки с помощью OCR
+                        # OCR только для изображений
                         pic_text = self._extract_text_from_image(image_bytes)
+                    else:
+                        image_bytes = b""
+                        pic_text = ""
 
-                        # Формируем итоговый текст
-                        combined_text = msg.message
-                        if links:
-                            combined_text += "\n" + "\n".join(links)
-                        # Добавляем распознанный текст
-                        if pic_text:
-                            combined_text += pic_text
+                    # Прикрепляем распознанный текст
+                    if pic_text:
+                        combined_text += pic_text
 
-                        events.append(
-                            {
-                                "event_id": str(msg.id),
-                                "channel": channel,
-                                "text": combined_text,
-                                "links": links,
-                                "date": msg.date.isoformat() if msg.date else None,
-                                "city": city,
-                                "image": image_bytes,
-                            }
-                        )
-                        logging.info("events has been processed.")
-                    except Exception as e:
-                        logging.error(f"error while processing message from tg: {e}")
+                    events.append(
+                        {
+                            "event_id": str(msg.id),
+                            "channel": channel,
+                            "text": combined_text,
+                            "links": links,
+                            "date": msg.date.isoformat() if msg.date else None,
+                            "city": city,
+                            "image": image_bytes,
+                        }
+                    )
+                    logging.info("Обработка сообщения завершена.")
+                except Exception as e:
+                    logging.error(f"Ошибка при обработке сообщения из Telegram: {e}", exc_info=True)
 
         return events
