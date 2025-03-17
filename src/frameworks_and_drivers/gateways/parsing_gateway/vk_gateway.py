@@ -2,6 +2,7 @@ import vk_api
 import os
 from exeptions import ExeptionCheckAnswerKeys
 import logging
+import requests
 
 logger = logging.getLogger("my_logger")
 logger.setLevel(logging.DEBUG)
@@ -107,17 +108,27 @@ class ParsingVK:
         self.check_api_response()
         self.post_list = []
 
-    def filter_content(self) -> list[dict]:
+    def filter_content(self):
         """
         Приводим спаршенный контент в нужную форму.
-        Пока что форма [{'id': 0, 'text': ''}]
+        Пока что форма [{'id': 0, 'text': '', orign_photo: bytes}]
         id - кастомный, просто нумерация
         """
         for i in range(self.count_posts):
             post = {}
             post_text = self.response["items"][i]["text"]
+            for attachment in self.response["items"][i]["attachments"]:
+                if attachment["type"] == "photo":
+                    post_photo_url = attachment["photo"]["orig_photo"]["url"]
+                    response = requests.get(post_photo_url)
+                    if response.status_code == 200:
+                        image_bytes = response.content
+                        print(type(image_bytes))
+                    else:
+                        raise  
             post["id"] = i
             post["text"] = post_text
+            post["image"] = image_bytes
             self.post_list.append(post)
 
     def get_filter_data(self):
