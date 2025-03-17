@@ -124,8 +124,6 @@ class ParsingVK:
                     if response.status_code == 200:
                         image_bytes = response.content
                         print(type(image_bytes))
-                    else:
-                        raise  
             post["id"] = i
             post["text"] = post_text
             post["image"] = image_bytes
