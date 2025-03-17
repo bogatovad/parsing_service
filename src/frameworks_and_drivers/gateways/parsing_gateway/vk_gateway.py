@@ -1,3 +1,4 @@
+import time
 import vk_api
 import os
 from exeptions import ExeptionCheckAnswerKeys
@@ -24,10 +25,12 @@ class ParsingVK:
         )
         self.VERSION_VK_API = 5.199
 
+
     def create_vk_session(self):
         vk_session = vk_api.VkApi(token=self.ACCESS_TOKEN)
         vk = vk_session.get_api()
         return vk
+
 
     def loading_group_ids(self):
         """Приводим из формата https://vk.com/torpedonn -> torpedonn"""
@@ -64,11 +67,13 @@ class ParsingVK:
             groups_id = [group.strip().rsplit("/", 1)[-1] for group in self.group_url]
         return groups_id
 
+
     def check_tokens(self, ACCESS_TOKEN):
         if not ACCESS_TOKEN:
             message = "Отсутствует обязательная переменная окружения {ACCESS_TOKEN}"
             logger.critical(message)
             raise ValueError("Нет переменной окружения SERVICE_KEY")
+
 
     def check_api_response_fields(self):
         """Проверка полей response на соответствие типу"""
@@ -77,6 +82,7 @@ class ParsingVK:
                 message = "Поле text, пришло не ввиде строки."
                 logger.error(message)
                 raise ValueError(message)
+
 
     def check_api_response(self):
         """Проверяется валидность ответа API"""
@@ -92,45 +98,58 @@ class ParsingVK:
 
         for i in range(self.count_posts):
             if "text" not in self.response["items"][i]:
-                message = "В ответе нет ключа text"
+                message = "В ответе нет ключа - text"
                 logger.error(message)
                 raise ExeptionCheckAnswerKeys(message)
         self.check_api_response_fields()
+
 
     def parsing(self, count=None):
         """Парсинг"""
         vk = self.create_vk_session()
         self.count_posts = count if count is not None else 3
-        groups_id = self.loading_group_ids()
-        self.response = vk.wall.get(
-            domain=groups_id[26], v=self.VERSION_VK_API, count=self.count_posts
-        )
-        self.check_api_response()
+        self.list_groups_id = self.loading_group_ids()
+        self.list_response = []
+        for group in self.list_groups_id:
+            self.response = vk.wall.get(
+                domain=group, v=self.VERSION_VK_API, count=self.count_posts
+            )
+            self.check_api_response()
+            self.list_response.append(self.response)
         self.post_list = []
 
     def filter_content(self):
         """
         Приводим спаршенный контент в нужную форму.
-        Пока что форма [{'id': 0, 'text': '', orign_photo: bytes}]
+        Пока что форма [{'id': int, 'text': str, orign_photo: bytes}]
         id - кастомный, просто нумерация
         """
-        for i in range(self.count_posts):
-            post = {}
-            post_text = self.response["items"][i]["text"]
-            for attachment in self.response["items"][i]["attachments"]:
-                if attachment["type"] == "photo":
-                    post_photo_url = attachment["photo"]["orig_photo"]["url"]
-                    response = requests.get(post_photo_url)
-                    if response.status_code == 200:
-                        image_bytes = response.content
-                        print(type(image_bytes))
-            post["id"] = i
-            post["text"] = post_text
-            post["image"] = image_bytes
-            self.post_list.append(post)
+        try:
+            self.count_posts_in_single_group = self.count_posts // len(self.list_groups_id)
+            for group_response in self.list_response:
+                for i in range(self.count_posts_in_single_group):
+                    post = {}
+                    post_text = group_response["items"][i]["text"]
+                    if "attachments" not in group_response["items"][i]:
+                        raise ExeptionCheckAnswerKeys("В ответе нет ключа - attachments")
+                    for attachment in self.response["items"][i]["attachments"]:
+                        if attachment["type"] == "photo":
+                            post_photo_url = attachment["photo"]["orig_photo"]["url"]
+                            response = requests.get(post_photo_url)
+                            if response.status_code == 200:
+                                image_bytes = response.content
+                                print(type(image_bytes))
+                    post["id"] = i
+                    post["text"] = post_text
+                    #post["image"] = image_bytes
+                    self.post_list.append(post)
+        except ExeptionCheckAnswerKeys as err:
+            logger.error(err)
+
 
     def get_filter_data(self):
         return self.post_list
+
 
     def preaty_print(self):
         """Печать постов через чёрточку(для консоли)"""
@@ -140,8 +159,11 @@ class ParsingVK:
 
 
 if __name__ == "__main__":
+    start = time.time()
     parser_vk = ParsingVK()
-    parser_vk.parsing(count=3)
+    parser_vk.parsing(count=30)
     parser_vk.filter_content()
+    end = time.time()
+
     parser_vk.preaty_print()
-    logger.info("Выполнилось")
+    logger.info(f"Выполнилось за {end - start}")
