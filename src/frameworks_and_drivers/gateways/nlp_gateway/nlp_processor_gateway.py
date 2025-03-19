@@ -3,7 +3,7 @@ import requests
 import yaml
 import logging
 import os
-
+import datetime
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
@@ -108,7 +108,26 @@ class NLPProcessor(NLPProcessorBase):
         Возвращает список словарей, где каждый словарь описывает отдельное событие.
         """
         main_prompt_template = self.prompt_config.get("main_prompt", "")
-        prompt = main_prompt_template.replace("{text}", text)
+
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        weekday_map = {
+            0: "Понедельник",
+            1: "Вторник",
+            2: "Среда",
+            3: "Четверг",
+            4: "Пятница",
+            5: "Суббота",
+            6: "Воскресенье",
+        }
+        current_day = weekday_map[datetime.now().weekday()]
+
+        prompt = (
+            main_prompt_template.replace("{text}", text)
+            .replace("{current_date}", current_date)
+            .replace("{current_day}", current_day)
+        )
+
         result_list = self._call_api(prompt, service="thebai")
         result_list = self._parse_response(result_list)
         if isinstance(result_list, list):

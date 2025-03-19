@@ -400,4 +400,3 @@ class KudaGoGateway(BaseGateway):
                     logging.error(f"Ошибка при запросе событий: {e}")
                     break
         return events
-
