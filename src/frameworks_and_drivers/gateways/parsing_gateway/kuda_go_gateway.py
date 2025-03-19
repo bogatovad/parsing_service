@@ -97,6 +97,8 @@ class KudaGoGateway(BaseGateway):
             "url": "",
             "image": "",
             "city": "nn",
+            "time" : "",
+            "is_endless" : event.get('dates', [{'is_endless' : False}])[-1]['is_endless']
             "time": "",
         }
 
@@ -147,11 +149,11 @@ class KudaGoGateway(BaseGateway):
         """
         Возвращает дату начала события.
         """
-        start_date = event.get("dates", [{}])[0].get("start", 0)
+        start_date = event.get("dates", [{}])[-1].get("start", 0)
         return (
             datetime.today().strftime(self.DATE_FORMAT)
             if (self.TIME_NOW - self.SECONDS_DAY) > start_date
-            else event["dates"][0].get("start_date", "")
+            else event["dates"][-1].get("start_date", "")
         )
 
     def _get_event_start_date_from_details(self, event_details: dict) -> str:
@@ -179,70 +181,73 @@ class KudaGoGateway(BaseGateway):
                 logging.error(f"Ошибка при загрузке изображения: {e}")
         return b""
 
-    def _parse_time(self, event_details: dict):
-        week_day = {0: "Пн", 1: "Вт", 2: "Ср", 3: "Чт", 4: "Пт", 5: "Сб", 6: "Вс"}
-        timetable, schedule_list, schedule_t_string = "", [], ""
-        if len(event_details["dates"]) == 1:
-            use_schedule = event_details["dates"][0]["use_place_schedule"]
-            event_date = event_details["dates"][0]
+    def _parse_time(self, event_details : dict):
+
+        week_day = {0 : "Пн", 1 : "Вт", 2 : "Ср", 3 : "Чт", 4 : "Пт", 5 : "Сб", 6 : "Вс"}
+        timetable, schedule_list, schedule_t_string   = '', [], ''
+        if event_details['id'] == '200189':
+            input(len(event_details['dates']))
+        if len(event_details['dates']) == 1:
+
+            use_schedule = event_details['dates'][0]['use_place_schedule']
+            event_date = event_details['dates'][0]
 
             start_date_none = event_date["start_date"] is None
             end_date_none = event_date["end_date"] is None
-            start_time_midnight = event_date.get("start_time") == "00:00:00"
+            end_time_none = (event_date["end_time"] is None or event_date["end_time"] == "00:00:00")
 
-            if (start_date_none and end_date_none) or (
-                start_date_none and start_time_midnight
-            ):
-                # специальный случай, когда из апишных непонятно, когда у нас начало и конец. обычно такая инфа дается в описании
-                schedule_t_string = "Подробности в описании"
+            start_time_midnight = True if (event_date.get('start_time') == '00:00:00' or event_date.get('start_time') is None) else False
+
+            none_condition = True if (start_date_none and end_date_none) or (start_date_none and start_time_midnight and end_time_none) else False
+
+            if use_schedule == False and none_condition == True and event_date['schedules'] == []:
+                #специальный случай, когда из апишных непонятно, когда у нас начало и конец. обычно такая инфа дается в описании
+                schedule_t_string = 'Подробности в описании'
 
             elif use_schedule is True:
                 place_id = event_details["place"].get("id")
                 place_data = requests.get(f"{self.BASE_URL}/places/{place_id}")
-                timetable = place_data.json()["timetable"]
-            elif event_details["dates"][0]["schedules"] != []:
-                schedules = event_details["dates"][0]["schedules"]
-                schedule_list, schedule_string = [], ""
+                timetable = place_data.json()['timetable']
 
+            elif not start_date_none and not start_time_midnight:
+                element_append = f"{event_date['start_time'].split(':')[0]}:{event_date['start_time'].split(':')[1]}"
+                schedule_list.append(element_append)
+
+            elif event_details['dates'][0]['schedules'] != []:
+                schedules = event_details['dates'][0]['schedules']
+                schedule_list, schedule_string = [], ''
+
+                #inter_string = ''
                 for n, schedule in enumerate(schedules):
-                    inter_string = ""
-                    days = schedule["days_of_week"]
-                    for d, day in enumerate(schedule["days_of_week"]):
-                        for day in days:
-                            first = days[0]
-                            status = False if len(days) == 1 else True
-                            if not status:
-                                break
-                            still_continue = True
-                            if status and d < len(days) - 1:
-                                still_continue = (
-                                    True if days[d] + 1 == days[d + 1] else False
-                                )
-                                last = days[d + 1]
-                                # врзможно стоит дополнить случваем, когда у нас still_continue false, но элементы еще есть
-                                if not still_continue:
-                                    inter_string = (
-                                        f"{week_day[first]} - {week_day[last]}"
-                                    )
-                            elif day == days[len(days) - 1] and still_continue:
-                                last = day
-                                if not inter_string:
-                                    inter_string = (
-                                        f"{week_day[first]} - {week_day[last]}"
-                                    )
-                                else:
-                                    inter_string = f"{inter_string}\n{week_day[first]} - {week_day[last]}"
-                                break
+                    days = schedule['days_of_week']
+                    inter_string = ''
 
-                    days_of_week = (
-                        inter_string
-                        if inter_string
-                        else ", ".join(
-                            [week_day[el] for el in schedule["days_of_week"]]
-                        )
-                    )
-                    # Специальный случай (в ходе тестирования end_time по событиям null)
-                    end_time = True if schedule["end_time"] is None else False
+                    if len(days) > 1:
+                        for d, day in enumerate(schedule['days_of_week']):
+                            for day in days:
+                                first = days[0]
+                                status = False if len(days) == 1 else True
+                                if not status:
+                                    break
+                                still_continue = True
+                                if status and d < len(days)-1:
+                                    still_continue = True if days[d] + 1 == days[d+1] else False
+                                    last = days[d+1]
+                                    # врзможно стоит дополнить случваем, когда у нас still_continue false, но элементы еще есть
+                                    if not still_continue:
+                                        inter_string = f"{week_day[first]} - {week_day[last]}"
+                                elif day == days[len(days)-1] and still_continue:
+                                    last = day
+                                    if not inter_string:
+                                        inter_string = f"{week_day[first]} - {week_day[last]}"
+                                    break
+
+                    if len(days) == 1:
+                        inter_string = f'{week_day[days[0]]}'
+                    days_of_week = inter_string if inter_string else ', '.join([week_day[el] for el in schedule['days_of_week']])
+                    #Специальный случай (в ходе тестирования end_time по событиям null)
+                    end_time = True if schedule['end_time'] is not None else False
+
                     #    schedule['end_time'] = "18:00:00"
                     try:
                         if end_time:
@@ -251,14 +256,16 @@ class KudaGoGateway(BaseGateway):
                             schedule_t_string = f"{days_of_week}: c {schedule['start_time'].split(':')[0]}:{schedule['start_time'].split(':')[1]}"
                     except AttributeError:
                         schedule_t_string = "Уточняйте у организаторов"
+
+                    schedule_list.append(schedule_t_string.lower())
             else:
                 start_date_none = event_date["start_date"] is None
                 end_date_none = event_date["end_date"] is None
                 start_time_midnight = event_date.get("start_time") == "00:00:00"
 
-                if not (start_date_none and end_date_none) or not (
-                    start_date_none and start_time_midnight
-                ):
+                none_condition = True if (start_date_none and end_date_none) or (start_date_none and start_time_midnight) else False
+
+                if not (start_date_none and end_date_none) or not (start_date_none and start_time_midnight) :
                     format_date = f'{event_date["start_date"].split("-")[2]}.{event_date["start_date"].split("-")[1]}'
                     end_time = True if event_date["end_time"] is not None else False
                     schedule_t_string = ""
@@ -279,17 +286,45 @@ class KudaGoGateway(BaseGateway):
                 else:
                     schedule_t_string = "Подробности в описании"
 
-            schedule_list.append(schedule_t_string)
+                schedule_list.append(schedule_t_string.lower())
 
-            schedule_list = list(set(schedule_list))
-            schedule_string = "\n".join(schedule_list)
+            schedule_string = '\n'.join(schedule_list)
             timetable = schedule_string if schedule_string else timetable
+
         else:
             try:
-                schedule_string, schedule_list, end_time = "", [], False
-                for date in event_details["dates"]:
-                    if date["end"] > round(time.time(), 0):
-                        if date["schedules"] != []:
+                schedule_string, schedule_list, end_time = '', [], False
+                for date in event_details['dates']:
+                    if date['schedules'] != [] and date['is_endless'] == True:
+                        schedules = date['schedules']
+                        for n, schedule in enumerate(schedules):
+                            days_of_week = ', '.join([week_day[el] for el in schedule['days_of_week']])
+                            end_time = True if schedule["end_time"] is not None else False
+                            if end_time:
+                                schedule_t_string = f"{days_of_week}: {schedule['start_time'].split(':')[0]}:{schedule['start_time'].split(':')[1]}-{schedule['end_time'].split(':')[0]}:{schedule['end_time'].split(':')[1]}"
+                            else:
+                                schedule_t_string = f"{days_of_week}: c {schedule['start_time'].split(':')[0]}:{schedule['start_time'].split(':')[1]}"
+
+                            if schedule_list != []:
+                                # что если уже присутствует в днях недели
+                                already_present = True if True in [True for day in week_day.values() if
+                                                                   day in schedule_t_string] else False
+
+                                if schedule_t_string not in schedule_list and not already_present:
+                                    schedule_list.append(schedule_t_string)
+                                elif schedule_t_string not in schedule_list and already_present:
+                                    what_presents = schedule_t_string.split(': ')[0]
+                                    current_substring = [el.split(': ') for el in schedule_list if what_presents in el][0][1]
+                                    index_position = [True for el in schedule_list if what_presents in el].index(True)
+                                    to_append = schedule_t_string.split(': ')[1]
+                                    print(to_append)
+                                    schedule_list[index_position] = f'{what_presents}: {current_substring}, {to_append}'
+                            else:
+                                schedule_list.append(schedule_t_string.lower())
+
+                    elif date['end'] > round(time.time(),0):
+                        if date['schedules'] != []:
+                          
                             # повторение из прошлого
                             schedules = event_details["dates"][0]["schedules"]
                             schedule_list, schedule_string = [], ""
@@ -318,13 +353,23 @@ class KudaGoGateway(BaseGateway):
                                 schedule_t_string = f'{date_format} {":".join(date["start_time"].split(":")[:2])}-{":".join(date["end_time"].split(":")[:2])}'
                             else:
                                 schedule_t_string = f'{date_format} с {":".join(date["start_time"].split(":")[:2])}'
-                        schedule_list.append(schedule_t_string)
-                schedule_string = "\n".join(schedule_list)
+
+                        # убираем дубликаты
+                        schedule_list.append(schedule_t_string.lower())
+
+                if len(schedule_list) == 1 and not event_details['dates'][0]['is_endless']:
+                    print(event_details['id'])
+                    schedule_list[0] = schedule_list[0].split(' с ')[1] \
+                        if ' с ' in schedule_list[0] \
+                        else schedule_list[0].split(' ')[1]
+
+
+                schedule_string = '\n'.join(schedule_list)
                 timetable = schedule_string
             except Exception as e:
-                input(f"Ошибка в _parse_time : {e}")
+                input(f'Ошибка в _parse_time : {e} : {event_details}')
 
-        return {"time": timetable}
+        return {"time" : timetable}
 
     def _add_kuda_go_events(self, current_json: list[dict]) -> list[dict]:
         """
