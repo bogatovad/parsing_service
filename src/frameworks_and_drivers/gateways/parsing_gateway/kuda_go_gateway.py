@@ -1,6 +1,5 @@
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-import requests
-import time
+import requests, time
 import re
 from datetime import datetime
 import logging
@@ -53,32 +52,25 @@ class KudaGoGateway(BaseGateway):
         event["place"] = "" if "place" not in event.keys() else event["place"]
 
         if event["price"]:
-            if "детям" not in event["price"]:
+            if not 'детям' in event['price']:
                 if re.search("[0-9]{1,10}", event["price"]):
                     prices = re.findall(r"-?\d+(?:\.\d+)?", event["price"])
                     if len(prices) == 2:
-                        event["price"] = [
-                            int(el)
-                            for el in re.findall(r"-?\d+(?:\.\d+)?", event["price"])
-                        ]
+                        event["price"] = [int(el) for el in re.findall(r"-?\d+(?:\.\d+)?", event["price"])]
                     else:
                         event["price"] = [prices[0]]
                 else:
                     event["price"] = [0]
             else:
-                event["price"] = [
-                    0,
-                    int(re.findall(r"-?\d+(?:\.\d+)?", event["price"])[0]),
-                ]
+                event["price"] = [0, int(re.findall(r"-?\d+(?:\.\d+)?", event["price"])[0])]
         else:
             event["price"] = [0]
 
-        # обработка описания
-        event["description"] = re.sub(r"[^\w\s]", "", event["description"])
+        #обработка описания
+        event['description'] = re.sub(r'[^\w\s]', '', event['description'])
 
-        # Первая буква имени - заглавная
-        event["title"] = f"{event['title'][0].upper()}{event['title'][1:]}"
-        # input(event['price'])
+        #Первая буква имени - заглавная
+        event['title'] = f"{event['title'][0].upper()}{event['title'][1:]}"
 
         current_event = {
             "id": event.get("id", "-"),
@@ -86,12 +78,10 @@ class KudaGoGateway(BaseGateway):
             "description": event.get("description", "-"),
             "tags": event.get("tags", []),
             "location": self._get_event_address(event),
-            "contact": event.get("place", {}).get("phone", "-")
-            if event["place"] is not None
-            else "-",
+            "contact": event.get("place", {}).get("phone", "-") if event['place'] is not None else "-",
             "date_start": self._get_event_start_date(event),
             "date_end": event.get("dates", [{}])[-1].get("end_date", ""),
-            "cost": min(event["price"])
+            "cost": min(event['price'])
             if event["price"] is not None
             else 0,  # дублируется возможно
             "url": "",
@@ -99,7 +89,6 @@ class KudaGoGateway(BaseGateway):
             "city": "nn",
             "time" : "",
             "is_endless" : event.get('dates', [{'is_endless' : False}])[-1]['is_endless']
-            "time": "",
         }
 
         if event:
@@ -132,17 +121,14 @@ class KudaGoGateway(BaseGateway):
         if place is None:
             # если не получилось достать, делаем длинную версию
             place = (
-                event.get("body_text")
-                .split("\n")[-1]
-                .strip()
-                .replace("KudaGo: ", "")
-                .replace("Фото: предоставлено организатором", "")
+                event.get("body_text").split("\n")[-1].strip().replace("KudaGo: ", "")
+                    .replace('Фото: предоставлено организатором', '')
             )
         else:
             place = f"{place.get('title', '')}\n{place.get('address', '')}".strip()
 
-        # доп.очистка
-        place = re.sub(r"[^\w\s]", "", place).strip()
+        #доп.очистка
+        place = re.sub(r'[^\w\s]', '', place).strip()
         return place
 
     def _get_event_start_date(self, event: dict) -> str:
@@ -183,10 +169,9 @@ class KudaGoGateway(BaseGateway):
 
     def _parse_time(self, event_details : dict):
 
-        week_day = {0 : "Пн", 1 : "Вт", 2 : "Ср", 3 : "Чт", 4 : "Пт", 5 : "Сб", 6 : "Вс"}
+        week_day = {0 : "пн", 1 : "вт", 2 : "ср", 3 : "чт", 4 : "пт", 5 : "сб", 6 : "вс"}
         timetable, schedule_list, schedule_t_string   = '', [], ''
-        if event_details['id'] == '200189':
-            input(len(event_details['dates']))
+
         if len(event_details['dates']) == 1:
 
             use_schedule = event_details['dates'][0]['use_place_schedule']
@@ -204,8 +189,8 @@ class KudaGoGateway(BaseGateway):
                 #специальный случай, когда из апишных непонятно, когда у нас начало и конец. обычно такая инфа дается в описании
                 schedule_t_string = 'Подробности в описании'
 
-            elif use_schedule is True:
-                place_id = event_details["place"].get("id")
+            elif use_schedule == True:
+                place_id = event_details['place'].get('id')
                 place_data = requests.get(f"{self.BASE_URL}/places/{place_id}")
                 timetable = place_data.json()['timetable']
 
@@ -247,7 +232,6 @@ class KudaGoGateway(BaseGateway):
                     days_of_week = inter_string if inter_string else ', '.join([week_day[el] for el in schedule['days_of_week']])
                     #Специальный случай (в ходе тестирования end_time по событиям null)
                     end_time = True if schedule['end_time'] is not None else False
-
                     #    schedule['end_time'] = "18:00:00"
                     try:
                         if end_time:
@@ -261,7 +245,7 @@ class KudaGoGateway(BaseGateway):
             else:
                 start_date_none = event_date["start_date"] is None
                 end_date_none = event_date["end_date"] is None
-                start_time_midnight = event_date.get("start_time") == "00:00:00"
+                start_time_midnight = event_date.get('start_time') == '00:00:00'
 
                 none_condition = True if (start_date_none and end_date_none) or (start_date_none and start_time_midnight) else False
 
@@ -273,16 +257,10 @@ class KudaGoGateway(BaseGateway):
                         if end_time:
                             time_start_end = f'{":".join(event_date["start_time"].split(":")[:2])}-{":".join(event_date["end_time"].split(":")[:2])}'
                         else:
-                            time_start_end = (
-                                f'с {":".join(event_date["start_time"].split(":")[:2])}'
-                            )
+                            time_start_end = f'с {":".join(event_date["start_time"].split(":")[:2])}'
                     except AttributeError:
                         schedule_t_string = "Уточняйте у организаторов"
-                    schedule_t_string = (
-                        f"{format_date} {time_start_end}"
-                        if not schedule_t_string
-                        else schedule_t_string
-                    )
+                    schedule_t_string = f"{format_date} {time_start_end}" if not schedule_t_string else schedule_t_string
                 else:
                     schedule_t_string = "Подробности в описании"
 
@@ -307,58 +285,48 @@ class KudaGoGateway(BaseGateway):
 
                             if schedule_list != []:
                                 # что если уже присутствует в днях недели
+                                what_presents = schedule_t_string.split(': ')[0]
+                                already_present_in_list = True if True in [True for this_string in schedule_list if what_presents in this_string] else False
+
                                 already_present = True if True in [True for day in week_day.values() if
-                                                                   day in schedule_t_string] else False
+                                                                   day in schedule_t_string and already_present_in_list] else False
 
                                 if schedule_t_string not in schedule_list and not already_present:
-                                    schedule_list.append(schedule_t_string)
+                                    schedule_list.append(schedule_t_string.lower())
                                 elif schedule_t_string not in schedule_list and already_present:
                                     what_presents = schedule_t_string.split(': ')[0]
                                     current_substring = [el.split(': ') for el in schedule_list if what_presents in el][0][1]
                                     index_position = [True for el in schedule_list if what_presents in el].index(True)
                                     to_append = schedule_t_string.split(': ')[1]
-                                    print(to_append)
                                     schedule_list[index_position] = f'{what_presents}: {current_substring}, {to_append}'
                             else:
                                 schedule_list.append(schedule_t_string.lower())
 
                     elif date['end'] > round(time.time(),0):
                         if date['schedules'] != []:
-                          
                             # повторение из прошлого
-                            schedules = event_details["dates"][0]["schedules"]
-                            schedule_list, schedule_string = [], ""
+                            schedules = event_details['dates'][0]['schedules']
+                            schedule_list, schedule_string = [], ''
                             for n, schedule in enumerate(schedules):
-                                days_of_week = ", ".join(
-                                    [week_day[el] for el in schedule["days_of_week"]]
-                                )
-                                end_time = (
-                                    True if date["end_time"] is not None else False
-                                )
+                                days_of_week = ', '.join([week_day[el] for el in schedule['days_of_week']])
+                                end_time = True if date["end_time"] is not None else False
                                 if end_time:
                                     schedule_t_string = f"{days_of_week}: {schedule['start_time'].split(':')[0]}:{schedule['start_time'].split(':')[1]}-{schedule['end_time'].split(':')[0]}:{schedule['end_time'].split(':')[1]}"
                                 else:
                                     schedule_t_string = f"{days_of_week}: c {schedule['start_time'].split(':')[0]}:{schedule['start_time'].split(':')[1]}"
                         else:
-                            start_date = (
-                                date["start_date"]
-                                if date["start_date"] is not None
-                                else datetime.today().strftime("%Y-%m-%d")
-                            )
-                            date_format = (
-                                f'{start_date.split("-")[2]}.{start_date.split("-")[1]}'
-                            )
+                            start_date = date["start_date"] if date["start_date"] is not None else datetime.today().strftime('%Y-%m-%d')
+                            date_format = f'{start_date.split("-")[2]}.{start_date.split("-")[1]}'
                             end_time = True if date["end_time"] is not None else False
                             if end_time:
                                 schedule_t_string = f'{date_format} {":".join(date["start_time"].split(":")[:2])}-{":".join(date["end_time"].split(":")[:2])}'
                             else:
                                 schedule_t_string = f'{date_format} с {":".join(date["start_time"].split(":")[:2])}'
-
                         # убираем дубликаты
                         schedule_list.append(schedule_t_string.lower())
 
                 if len(schedule_list) == 1 and not event_details['dates'][0]['is_endless']:
-                    print(event_details['id'])
+
                     schedule_list[0] = schedule_list[0].split(' с ')[1] \
                         if ' с ' in schedule_list[0] \
                         else schedule_list[0].split(' ')[1]
@@ -370,6 +338,7 @@ class KudaGoGateway(BaseGateway):
                 input(f'Ошибка в _parse_time : {e} : {event_details}')
 
         return {"time" : timetable}
+
 
     def _add_kuda_go_events(self, current_json: list[dict]) -> list[dict]:
         """
@@ -390,11 +359,13 @@ class KudaGoGateway(BaseGateway):
                     parsed_event = self._parse_event(event)
                     if "акции и скидки" not in parsed_event["tags"]:
                         events_list.append(parsed_event)
-                except KeyError:
-                    # бывает неправильно парсится (1 событие в выборке)
+                except KeyError as ke:
+                    #бывает неправильно парсится (1 событие в выборке)
                     continue
                 except Exception as e:
-                    logging.error(f"Ошибка при добавлении события {event['id']}: {e}")
+                    logging.error(
+                        f"Ошибка при добавлении события {event['id']}: {e}"
+                    )
                     input(f"{e}")
         return events_list
 
