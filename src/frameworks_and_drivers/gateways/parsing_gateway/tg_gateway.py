@@ -76,7 +76,7 @@ class TelegramGateway(BaseGateway):
 
     def is_image_message(self, msg) -> bool:
         """
-        Проверяем, является ли вложение сообщением с изображением.
+        Проверяем, является ли вложение сообщением с изображением
         """
         if msg.photo:
             return True
