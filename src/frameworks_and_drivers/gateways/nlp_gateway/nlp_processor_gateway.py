@@ -3,7 +3,7 @@ import requests
 import yaml
 import logging
 import os
-
+import datetime
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
@@ -118,13 +118,12 @@ class NLPProcessor(NLPProcessorBase):
             3: "Четверг",
             4: "Пятница",
             5: "Суббота",
-            6: "Воскресенье"
+            6: "Воскресенье",
         }
         current_day = weekday_map[datetime.now().weekday()]
-        
+
         prompt = (
-            main_prompt_template
-            .replace("{text}", text)
+            main_prompt_template.replace("{text}", text)
             .replace("{current_date}", current_date)
             .replace("{current_day}", current_day)
         )

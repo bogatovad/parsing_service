@@ -50,7 +50,7 @@ class TelegramGateway(BaseGateway):
         self._run_auth()
 
         # Инициализируем OCR
-        self.ocr_reader = easyocr.Reader(['ru', 'en'], gpu=False)
+        self.ocr_reader = easyocr.Reader(["ru", "en"], gpu=False)
 
     def _run_auth(self) -> None:
         self.client.connect()
@@ -104,16 +104,25 @@ class TelegramGateway(BaseGateway):
         Извлекает текст с помощью easyocr и возвращает его
         с префиксом, если распознанный текст не пуст.
         """
-        ocr_prefix = "\n\nДалее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то ценная информация - адрес, телефон, дата, время, цена или что-то ещё важное для нашего анализа, чего нет в основном тексте, то добавь это в json. Если информация дублируется по разному, то в приоритете данные из текста поста. ]"
+        ocr_prefix = (
+            "[Далее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то "
+            "дополнительная информация - адрес, телефон, цена или что-то ещё ценное, чего нет в тексте, то "
+            "добавь это в json. Если информация дублируется по разному, то в приоритете данные из "
+            "текста поста.]"
+        )
         if not image_bytes:
             return ""
         try:
             pil_image = Image.open(BytesIO(image_bytes))
             result = self.ocr_reader.readtext(pil_image)
+
             if not result:
                 return ""
-            recognized_text = "\n".join([item[1] for item in result]) 
-            if not recognized_text.strip():
+
+            recognized_text = "\n".join(
+                [item[1].strip() for item in result if item[1].strip()]
+            )
+            if not recognized_text:
                 return ""
             return f"\n{ocr_prefix}\n{recognized_text}"
         except Exception as e:

@@ -34,7 +34,7 @@ class GetContentKudaGoUseCase(AbstractUseCase):
 
             if unique_id in exists_unique_ids:
                 continue
-            
+
             processed_link_name = self.nlp_processor.generate_link_title(
                 element.get("description")
             )
@@ -57,6 +57,6 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 city=element.get("city", ""),
                 unique_id=element.get("name", "Default Name FROM KUDA GO"),
             )
-            self.content_repo.save_one_content(content_element)
 
+            self.content_repo.save_one_content(content_element)
         return True
