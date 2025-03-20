@@ -53,27 +53,21 @@ class ParsingVK:
             "https://vk.com/topgid_nnov",
         ]
 
-
-    def create_vk_session(self):
+    def create_vk_session(self) -> VkApiMethod:  # type: ignore
         vk_session = vk_api.VkApi(token=self.ACCESS_TOKEN)
-        vk = vk_session.get_api()
-        return vk
+        return vk_session.get_api()
 
-
-    def loading_group_ids(self):
+    def loading_group_ids(self) -> list[str]:
         """Приводим из формата https://vk.com/torpedonn -> torpedonn"""
-        groups_id = [group.strip().rsplit("/", 1)[-1] for group in self.group_url]
-        return groups_id
+        return [group.strip().rsplit("/", 1)[-1] for group in self.group_url]
 
-
-    def check_tokens(self, ACCESS_TOKEN):
-        if not ACCESS_TOKEN:
+    def check_tokens(self) -> None:
+        if not self.ACCESS_TOKEN:
             message = "Отсутствует обязательная переменная окружения {ACCESS_TOKEN}"
             logger.critical(message)
             raise ValueError("Нет переменной окружения SERVICE_KEY")
 
-
-    def check_api_response_fields(self):
+    def check_api_response_fields(self) -> None:
         """Проверка полей response на соответствие типу"""
         for i in range(len(self.response["items"])):
             if not isinstance(self.response["items"][i]["text"], str):
@@ -81,8 +75,7 @@ class ParsingVK:
                 logger.error(message)
                 raise ValueError(message)
 
-
-    def check_api_response(self):
+    def check_api_response(self) -> None:
         """Проверяется валидность ответа API"""
         if not isinstance(self.response, dict):
             message = "Response пришёл не ввиде словаря"
@@ -101,8 +94,7 @@ class ParsingVK:
                 raise ExeptionCheckAnswerKeys(message)
         self.check_api_response_fields()
 
-
-    def parsing(self, amount=None):
+    def parsing(self, amount: int = None) -> None:
         """Парсинг"""
         vk = self.create_vk_session()
         self.amount_posts = amount if amount is not None else 3
@@ -111,13 +103,17 @@ class ParsingVK:
         amount_pars_group = len(self.list_groups_id)
         if self.amount_posts > amount_pars_group:
             self.amount_posts_from_single_group = self.amount_posts // amount_pars_group
-            amount_group_add_1post = self.amount_posts - (len(self.list_groups_id)* self.amount_posts_from_single_group)
+            amount_group_add_1post = self.amount_posts - (
+                len(self.list_groups_id) * self.amount_posts_from_single_group
+            )
             count = 0
             for group in self.list_groups_id:
                 if count < amount_group_add_1post:
                     self.amount_posts_from_single_group += 1
                     self.response = vk.wall.get(
-                        domain=group, v=self.VERSION_VK_API, count=self.amount_posts_from_single_group
+                        domain=group,
+                        v=self.VERSION_VK_API,
+                        count=self.amount_posts_from_single_group,
                     )
                     self.amount_posts_from_single_group -= 1
                     self.check_api_response()
@@ -125,7 +121,9 @@ class ParsingVK:
                     count += 1
                 else:
                     self.response = vk.wall.get(
-                        domain=group, v=self.VERSION_VK_API, count=self.amount_posts_from_single_group
+                        domain=group,
+                        v=self.VERSION_VK_API,
+                        count=self.amount_posts_from_single_group,
                     )
                     self.check_api_response()
                     self.list_response.append(self.response)
@@ -140,9 +138,8 @@ class ParsingVK:
                     self.check_api_response()
                     self.list_response.append(self.response)
                 count += 1
-           
 
-    def filter_content(self):
+    def filter_content(self) -> None:
         """
         Приводим спаршенный контент в нужную форму.
         Пока что форма [{'id': int, 'text': str, orign_photo: bytes}]
@@ -151,16 +148,23 @@ class ParsingVK:
         try:
             self.post_list = []
             for group_response in self.list_response:
-                for i in range(len(group_response["items"])):        
+                for i in range(len(group_response["items"])):
                     if "attachments" not in group_response["items"][i]:
-                        raise ExeptionCheckAnswerKeys("В ответе нет ключа - attachments")
+                        raise ExeptionCheckAnswerKeys(
+                            "В ответе нет ключа - attachments"
+                        )
                     post = {}
                     text = group_response["items"][i]["text"]
                     if text:
                         post_text = text
                         for attachment in group_response["items"][i]["attachments"]:
-                            if len(group_response["items"][i]["attachments"]) == 1 and attachment["type"] == "photo":
-                                post_photo_url = attachment["photo"]["orig_photo"]["url"]
+                            if (
+                                len(group_response["items"][i]["attachments"]) == 1
+                                and attachment["type"] == "photo"
+                            ):
+                                post_photo_url = attachment["photo"]["orig_photo"][
+                                    "url"
+                                ]
                                 response = requests.get(post_photo_url)
                                 if response.status_code == 200:
                                     image_bytes = response.content
@@ -172,16 +176,15 @@ class ParsingVK:
         except (ExeptionCheckAnswerKeys, TypeError) as err:
             logger.error(err)
 
-
-    def get_filter_data(self):
+    def get_filter_data(self) -> list[dict]:
         return self.post_list
-
 
     def preaty_print(self):
         """Печать постов через чёрточку(для консоли)"""
         for i in range(len(self.post_list)):
             print("-------------------------------------------------------------")
             print(self.post_list[i])
+            break
 
 
 if __name__ == "__main__":
@@ -191,5 +194,6 @@ if __name__ == "__main__":
     parser_vk.filter_content()
     end = time.time()
 
-    #parser_vk.preaty_print()
+    parser_vk.preaty_print()
+
     logger.info(f"Выполнилось за {end - start}")
