@@ -59,6 +59,9 @@ class TelegramGateway(BaseGateway):
         if not self.client.is_user_authorized():
             raise Exception("TelegramClient не авторизован!")
 
+    def get_sources(self):
+        return self.channels
+
     @staticmethod
     def get_links(msg) -> list[str]:
         links = []
@@ -119,45 +122,44 @@ class TelegramGateway(BaseGateway):
             logging.error(f"Ошибка OCR: {e}", exc_info=True)
             return ""
 
-    def fetch_content(self) -> list[dict]:
+    def fetch_content(self, channel: str, city: str) -> list[dict]:
         """
         Получает сообщения из указанных каналов, добавляет
         к сообщению ссылку и текст, распознанный из картинки.
         """
         events = []
-        for channel, city in self.channels:
-            logging.info(f"processing {channel}")
-            messages = self.client.get_messages(channel, limit=10)
-            logging.info("messages have been received.")
+        logging.info(f"processing {channel}")
+        messages = self.client.get_messages(channel, limit=10)
+        logging.info("messages have been received.")
 
-            for msg in messages:
-                if msg.message:
-                    try:
-                        image_bytes = self.get_image_bytes(msg)
-                        links = self.get_links(msg)
-                        logging.info("links has been got.")
-                        pic_text = self._extract_text_from_image(image_bytes)
-                        combined_text = msg.message
+        for msg in messages:
+            if msg.message:
+                try:
+                    image_bytes = self.get_image_bytes(msg)
+                    links = self.get_links(msg)
+                    logging.info("links has been got.")
+                    pic_text = self._extract_text_from_image(image_bytes)
+                    combined_text = msg.message
 
-                        if links:
-                            combined_text += "\n" + "\n".join(links)
+                    if links:
+                        combined_text += "\n" + "\n".join(links)
 
-                        if pic_text:
-                            combined_text += pic_text
+                    if pic_text:
+                        combined_text += pic_text
 
-                        events.append(
-                            {
-                                "event_id": str(msg.id),
-                                "channel": channel,
-                                "text": combined_text,
-                                "links": links,
-                                "date": msg.date.isoformat() if msg.date else None,
-                                "city": city,
-                                "image": image_bytes,
-                            }
-                        )
-                        logging.info("events has been processed.")
-                    except Exception as e:
-                        logging.error(f"error while processing message from tg: {e}")
+                    events.append(
+                        {
+                            "event_id": str(msg.id),
+                            "channel": channel,
+                            "text": combined_text,
+                            "links": links,
+                            "date": msg.date.isoformat() if msg.date else None,
+                            "city": city,
+                            "image": image_bytes,
+                        }
+                    )
+                    logging.info("events has been processed.")
+                except Exception as e:
+                    logging.error(f"error while processing message from tg: {e}")
 
         return events
