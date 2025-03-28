@@ -18,6 +18,9 @@ class TimepadGateway(BaseGateway):
         """
         self.client = client
 
+    def get_sources(self):
+        pass
+
     def fetch_content(self) -> List[Dict]:
         """
         Метод для получения событий из Timepad. Должен быть реализован в соответствии с API.

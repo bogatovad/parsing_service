@@ -27,39 +27,43 @@ class GetContentTgUseCase(AbstractUseCase):
         self.file_repo = file_repo
 
     def execute(self) -> bool:
-        logging.info(Message.START_GATEWAY_PROCESS)
-        raw_contents = self.gateway.fetch_content()
-        logging.info(Message.END_GATEWAY_PROCESS)
-        logging.info(f"Всего данных собрано {len(raw_contents)}")
+        sources = self.gateway.get_sources()
 
-        if not raw_contents:
-            return False
+        for source, city in sources:
+            logging.info(Message.START_GATEWAY_PROCESS)
+            logging.info(f"processing {source} {city}")
+            raw_contents = self.gateway.fetch_content(source, city)
+            logging.info(Message.END_GATEWAY_PROCESS)
+            logging.info(f"Всего данных собрано {len(raw_contents)}")
 
-        exists_unique_ids = self.content_repo.get_all_unique_ids()
+            if not raw_contents:
+                return False
 
-        for raw in raw_contents:
-            processed_result = self.nlp_processor.process_post(raw)
-            if not processed_result:
-                continue
+            exists_unique_ids = self.content_repo.get_all_unique_ids()
 
-            image_data = raw.get("image") or b""  # noqa: F841
-
-            for event in processed_result:
-                unique_id = event.get("name", "") + raw.get("channel", "")
-                if unique_id in exists_unique_ids:
+            for raw in raw_contents:
+                processed_result = self.nlp_processor.process_post(raw)
+                if not processed_result:
                     continue
 
-                if "image" not in event or not event["image"]:
-                    # Если изображение отсутствует – генерируем его через Kandinsky
-                    event["image"] = generate_image_with_kandinsky(
-                        f"{event.get('name', '')} {event.get('description', '')}"
-                    )
+                image_data = raw.get("image") or b""  # noqa: F841
 
-                content = self._create_schema_from_event(event, unique_id)
-                if content:
-                    logging.info(Message.CREATE_SCHEMA)
-                    logging.info(f"Save content from tg {content}")
-                    self.content_repo.save_one_content(content)
+                for event in processed_result:
+                    unique_id = event.get("name", "") + raw.get("channel", "")
+                    if unique_id in exists_unique_ids:
+                        continue
+
+                    if "image" not in event or not event["image"]:
+                        # Если изображение отсутствует – генерируем его через Kandinsky
+                        event["image"] = generate_image_with_kandinsky(
+                            f"{event.get('name', '')} {event.get('description', '')}"
+                        )
+
+                    content = self._create_schema_from_event(event, unique_id)
+                    if content:
+                        logging.info(Message.CREATE_SCHEMA)
+                        logging.info(f"Save content from tg {content}")
+                        self.content_repo.save_one_content(content)
 
         return True
 
