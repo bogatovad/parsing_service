@@ -8,3 +8,7 @@ class BaseGateway(ABC):
     @abstractmethod
     def fetch_content(self) -> list[dict]:
         raise NotImplementedError
+
+    @abstractmethod
+    def get_sources(self):
+        raise NotImplementedError

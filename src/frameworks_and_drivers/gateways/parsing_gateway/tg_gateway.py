@@ -66,7 +66,7 @@ class TelegramGateway(BaseGateway):
                     url = (
                         entity.url
                         if hasattr(entity, "url") and entity.url
-                        else msg.message[entity.offset: entity.offset + entity.length]
+                        else msg.message[entity.offset : entity.offset + entity.length]
                     )
                     # Игнорируем служебные ссылки t.me
                     if "https://t.me" in url:
@@ -80,7 +80,7 @@ class TelegramGateway(BaseGateway):
         """
         if msg.photo:
             return True
-        if msg.document and getattr(msg.document, 'mime_type', None):
+        if msg.document and getattr(msg.document, "mime_type", None):
             # Например "image/jpeg", "image/png" и т.п.
             return msg.document.mime_type.startswith("image/")
         return False
@@ -126,59 +126,66 @@ class TelegramGateway(BaseGateway):
                 return ""
             return f"\n{ocr_prefix}\n{recognized_text}"
         except Exception as e:
-            logging.error(f"Ошибка при распознавании OCR (файл может не быть изображением): {e}", exc_info=True)
+            logging.error(
+                f"Ошибка при распознавании OCR (файл может не быть изображением): {e}",
+                exc_info=True,
+            )
             return ""
 
-    def fetch_content(self) -> list[dict]:
+    def get_sources(self):
+        return self.channels
+
+    def fetch_content(self, channel: str, city: str) -> list[dict]:
         """
         Получает сообщения из указанных каналов, добавляет
         к сообщению ссылку и текст, распознанный из картинки.
         """
         events = []
-        for channel, city in self.channels:
-            logging.info(f"Обрабатываем канал: {channel}")
-            messages = self.client.get_messages(channel, limit=10)
-            logging.info("Сообщения успешно получены.")
+        logging.info(f"Обрабатываем канал: {channel}")
+        messages = self.client.get_messages(channel, limit=10)
+        logging.info("Сообщения успешно получены.")
 
-            for msg in messages:
-                if not msg.message:
-                    continue
+        for msg in messages:
+            if not msg.message:
+                continue
 
-                try:
-                    links = self.get_links(msg)
-                    logging.info("Ссылки извлечены.")
+            try:
+                links = self.get_links(msg)
+                logging.info("Ссылки извлечены.")
 
-                    # Собираем текст сообщений
-                    combined_text = msg.message
-                    if links:
-                        combined_text += "\n" + "\n".join(links)
+                # Собираем текст сообщений
+                combined_text = msg.message
+                if links:
+                    combined_text += "\n" + "\n".join(links)
 
-                    # Проверяем, является ли медиа изображением
-                    if self.is_image_message(msg):
-                        image_bytes = self.get_image_bytes(msg)
-                        # OCR только для изображений
-                        pic_text = self._extract_text_from_image(image_bytes)
-                    else:
-                        image_bytes = b""
-                        pic_text = ""
+                # Проверяем, является ли медиа изображением
+                if self.is_image_message(msg):
+                    image_bytes = self.get_image_bytes(msg)
+                    # OCR только для изображений
+                    pic_text = self._extract_text_from_image(image_bytes)
+                else:
+                    image_bytes = b""
+                    pic_text = ""
 
-                    # Прикрепляем распознанный текст
-                    if pic_text:
-                        combined_text += pic_text
+                # Прикрепляем распознанный текст
+                if pic_text:
+                    combined_text += pic_text
 
-                    events.append(
-                        {
-                            "event_id": str(msg.id),
-                            "channel": channel,
-                            "text": combined_text,
-                            "links": links,
-                            "date": msg.date.isoformat() if msg.date else None,
-                            "city": city,
-                            "image": image_bytes,
-                        }
-                    )
-                    logging.info("Обработка сообщения завершена.")
-                except Exception as e:
-                    logging.error(f"Ошибка при обработке сообщения из Telegram: {e}", exc_info=True)
+                events.append(
+                    {
+                        "event_id": str(msg.id),
+                        "channel": channel,
+                        "text": combined_text,
+                        "links": links,
+                        "date": msg.date.isoformat() if msg.date else None,
+                        "city": city,
+                        "image": image_bytes,
+                    }
+                )
+                logging.info("Обработка сообщения завершена.")
+            except Exception as e:
+                logging.error(
+                    f"Ошибка при обработке сообщения из Telegram: {e}", exc_info=True
+                )
 
         return events

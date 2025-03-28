@@ -12,6 +12,9 @@ class YandexAfishaGateway(BaseGateway):
         """
         self.client = client
 
+    def get_sources(self):
+        pass
+
     def fetch_content(self) -> List[Dict]:
         """
         Метод для получения событий из Telegram. Должен быть реализован в соответствии с API.
