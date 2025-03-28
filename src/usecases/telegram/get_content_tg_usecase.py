@@ -78,10 +78,10 @@ class GetContentTgUseCase(AbstractUseCase):
             except (ValueError, TypeError):
                 cost = 0
 
-            date_start = event.get("data_start", datetime.now())
+            date_start = event.get("data_start", str(datetime.now()))
             date_end = event.get("data_end", "")
 
-            current_time = datetime.now()
+            current_time = str(datetime.now())
 
             if date_end:
                 if not (date_start <= current_time <= date_end):
