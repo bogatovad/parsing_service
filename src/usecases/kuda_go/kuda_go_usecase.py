@@ -11,6 +11,7 @@ from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
 
+from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway import KudaGoGateway
 
 class GetContentKudaGoUseCase(AbstractUseCase):
     def __init__(
@@ -29,7 +30,9 @@ class GetContentKudaGoUseCase(AbstractUseCase):
         raw_content = self.gateway.fetch_content()
         exists_unique_ids = self.content_repo.get_all_unique_ids()  # noqa: F841
 
+        result = []
         for element in raw_content:
+
             unique_id = element.get("name", "Default Name FROM KUDA GO")
 
             if unique_id in exists_unique_ids:
@@ -42,6 +45,7 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             processed_categories = self.nlp_processor.determine_category(
                 element.get("description")
             )
+
 
             content_element = ContentPydanticSchema(
                 name=element.get("name", "Default Name FROM KUDA GO"),
@@ -59,4 +63,17 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             )
 
             self.content_repo.save_one_content(content_element)
-        return True
+            result.append(content_element)
+        return result
+
+
+if __name__ == '__main__':
+    this_class = GetContentKudaGoUseCase(gateway=KudaGoGateway())
+     #, content_repo=content_repo, nlp_processor=None, file_repo=None)
+    rst = this_class.execute()
+    print(rst)
+    print(len(rst))
+    #with open('kgd.json', 'w', encoding='utf-8') as kgd:
+    #    new = json.dumps(rst, ensure_ascii=False, indent=4)
+    #    kgd.write(new)
+    print('ready')
