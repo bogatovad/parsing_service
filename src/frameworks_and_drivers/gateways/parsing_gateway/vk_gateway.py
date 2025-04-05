@@ -1,8 +1,10 @@
 import time
 import vk_api
-from exeptions import ExeptionCheckAnswerKeys
+from frameworks_and_drivers.gateways.parsing_gateway.exeptions import ExeptionCheckAnswerKeys
 import logging
 import requests
+
+from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 
 logger = logging.getLogger("my_logger")
 logger.setLevel(logging.DEBUG)
@@ -17,8 +19,9 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-class ParsingVK:
+class ParsingVK(BaseGateway):
     def __init__(self):
+        self.post_list = []
         self.ACCESS_TOKEN = (
             "e55cb58be55cb58be55cb58b7be67746d4ee55ce55cb58b828c1488691a1e2af624bda5"
         )
@@ -53,7 +56,7 @@ class ParsingVK:
             "https://vk.com/topgid_nnov",
         ]
 
-    def create_vk_session(self) -> VkApiMethod:  # type: ignore
+    def create_vk_session(self):  # type: ignore
         vk_session = vk_api.VkApi(token=self.ACCESS_TOKEN)
         return vk_session.get_api()
 
@@ -142,11 +145,10 @@ class ParsingVK:
     def filter_content(self) -> None:
         """
         Приводим спаршенный контент в нужную форму.
-        Пока что форма [{'id': int, 'text': str, orign_photo: bytes}]
-        id - кастомный, просто нумерация
+        Пока что форма [{'id': str, 'text': str, 'image': bytes}]
+        id - hash соответствующего поста
         """
         try:
-            self.post_list = []
             for group_response in self.list_response:
                 for i in range(len(group_response["items"])):
                     if "attachments" not in group_response["items"][i]:
@@ -155,6 +157,7 @@ class ParsingVK:
                         )
                     post = {}
                     text = group_response["items"][i]["text"]
+                    id_hash = group_response["items"][i]["hash"]
                     if text:
                         post_text = text
                         for attachment in group_response["items"][i]["attachments"]:
@@ -169,14 +172,16 @@ class ParsingVK:
                                 if response.status_code == 200:
                                     image_bytes = response.content
                                     print(type(image_bytes))
-                                post["id"] = i
+                                post["id"] = id_hash
                                 post["text"] = post_text
                                 post["image"] = image_bytes
                                 self.post_list.append(post)
         except (ExeptionCheckAnswerKeys, TypeError) as err:
             logger.error(err)
 
-    def get_filter_data(self) -> list[dict]:
+    def fetch_content(self) -> list[dict]:
+        self.parsing(amount=80)
+        self.filter_content()
         return self.post_list
 
     def preaty_print(self):
@@ -184,13 +189,13 @@ class ParsingVK:
         for i in range(len(self.post_list)):
             print("-------------------------------------------------------------")
             print(self.post_list[i])
-            break
+        print("Количество постов:", len(self.post_list))
 
 
 if __name__ == "__main__":
     start = time.time()
     parser_vk = ParsingVK()
-    parser_vk.parsing(amount=5)
+    parser_vk.parsing(amount=15)
     parser_vk.filter_content()
     end = time.time()
 
