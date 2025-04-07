@@ -1,6 +1,8 @@
 import time
 import vk_api
-from frameworks_and_drivers.gateways.parsing_gateway.exeptions import ExeptionCheckAnswerKeys
+from frameworks_and_drivers.gateways.parsing_gateway.exeptions import (
+    ExeptionCheckAnswerKeys,
+)
 import logging
 import requests
 
@@ -171,16 +173,16 @@ class ParsingVK(BaseGateway):
                                 response = requests.get(post_photo_url)
                                 if response.status_code == 200:
                                     image_bytes = response.content
-                                    print(type(image_bytes))
                                 post["id"] = id_hash
                                 post["text"] = post_text
-                                post["image"] = image_bytes
+                                if isinstance(image_bytes, bytes):
+                                    post["image"] = image_bytes
                                 self.post_list.append(post)
         except (ExeptionCheckAnswerKeys, TypeError) as err:
             logger.error(err)
 
     def fetch_content(self) -> list[dict]:
-        self.parsing(amount=80)
+        self.parsing(amount=100)
         self.filter_content()
         return self.post_list
 
@@ -190,15 +192,3 @@ class ParsingVK(BaseGateway):
             print("-------------------------------------------------------------")
             print(self.post_list[i])
         print("Количество постов:", len(self.post_list))
-
-
-if __name__ == "__main__":
-    start = time.time()
-    parser_vk = ParsingVK()
-    parser_vk.parsing(amount=15)
-    parser_vk.filter_content()
-    end = time.time()
-
-    parser_vk.preaty_print()
-
-    logger.info(f"Выполнилось за {end - start}")

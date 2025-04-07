@@ -3,7 +3,7 @@ import re
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
-from datetime import  datetime
+from datetime import datetime
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
@@ -45,8 +45,7 @@ class GetContentVkUseCase(AbstractUseCase):
             return False
 
         exists_unique_ids = self.content_repo.get_all_unique_ids()
-        #logger.info(raw_contents)
-        #otladocniy_list = []
+
         for raw in raw_contents:
             processed_result = self.nlp_processor.process_post(raw)
             if not processed_result:
@@ -59,10 +58,10 @@ class GetContentVkUseCase(AbstractUseCase):
                 content = self._create_schema_from_event(event, unique_id)
                 if content:
                     logger.info("Схема создана")
-                    logger.info(f"Save content from вк {content}")
+                    logger.info(f"Save content from VK")
                     self.content_repo.save_one_content(content)
         return True
-    
+
     @staticmethod
     def _create_schema_from_event(
         event: dict, unique_id: str
@@ -76,17 +75,13 @@ class GetContentVkUseCase(AbstractUseCase):
 
             date_start = event.get("data_start", "")
             date_end = event.get("data_end", "")
-            if not date_start: 
-                logging.info(
-                        "Нет даты начала."
-                    )
+            if not date_start:
+                logging.info("Нет даты начала.")
                 return None
             current_date = datetime.now()
             date_end = datetime.strptime(date_end, "%Y-%m-%d")
             if current_date > date_end:
-                logging.info(
-                    "Мероприятие завершено."
-                )
+                logging.info("Мероприятие завершено.")
                 return None
 
             return ContentPydanticSchema(
@@ -106,7 +101,3 @@ class GetContentVkUseCase(AbstractUseCase):
         except Exception as e:
             logging.error(f"Ошибка при создании схемы: {e}", exc_info=True)
             return None
-
-    
-
-

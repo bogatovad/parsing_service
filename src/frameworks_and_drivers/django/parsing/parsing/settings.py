@@ -171,6 +171,6 @@ CELERY_BEAT_SCHEDULE = {
     # },
     "example-task-vk-10-05am": {
         "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_vk_task",
-        "schedule": crontab(minute='*/2'),
+        "schedule": crontab(minute='*/3'),
     },    
 }
