@@ -18,11 +18,14 @@ class NLPProcessor(NLPProcessorBase):
     def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
         super().__init__()  # если у вас есть родительский конструктор
 
-        self.thebai_api_url = os.getenv("THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions")
+        self.thebai_api_url = os.getenv(
+            "THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions"
+        )
         self.thebai_api_key = "sk-te5U1TN6yvTYFuB8Nc8FVGhlQi5BSQL7dkdAaPePqRXNf7Wu"
         self.openrouter_api_url = "https://openrouter.ai/api/v1/chat/completions"
         self.openrouter_api_key = (
-            "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")
+            "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"
+        )
         self.attempt_interval = 60
         self.max_retries = 3
 

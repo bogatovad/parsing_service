@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from dateutil.parser import parse
 
-from dedup import check_and_add_event  # ваш модуль dedup.py (обновлённый)
+from dedup import check_and_add_event
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
