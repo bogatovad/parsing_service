@@ -15,3 +15,4 @@ psycopg2-binary==2.9.6
 easyocr
 pillow
 olefile
+RapidFuzz

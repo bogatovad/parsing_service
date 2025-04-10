@@ -5,7 +5,9 @@ import logging
 import os
 from datetime import datetime
 
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
+from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
+    NLPProcessorBase,
+)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -15,9 +17,8 @@ class NLPProcessor(NLPProcessorBase):
     Класс, отвечающий за вызов LLM (theb.ai / openrouter),
     формирование промптов и разбор ответа в список событий.
     """
-    def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
-        super().__init__()  # если у вас есть родительский конструктор
 
+    def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
         self.thebai_api_url = os.getenv(
             "THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions"
         )
@@ -32,7 +33,9 @@ class NLPProcessor(NLPProcessorBase):
         with open(prompt_file, "r", encoding="utf-8") as f:
             self.prompt_config = yaml.safe_load(f)
 
-        logging.debug("NLPProcessor инициализирован. Промпты загружены из: %s", prompt_file)
+        logging.debug(
+            "NLPProcessor инициализирован. Промпты загружены из: %s", prompt_file
+        )
 
     def _parse_response(self, response_text: str) -> list:
         logging.debug("Парсим ответ нейросети: %s", response_text)
@@ -108,12 +111,19 @@ class NLPProcessor(NLPProcessorBase):
         """
         main_prompt = self.prompt_config.get("main_prompt", "")
         current_date = datetime.now().strftime("%Y-%m-%d")
-        weekday_map = ["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"]
+        weekday_map = [
+            "Понедельник",
+            "Вторник",
+            "Среда",
+            "Четверг",
+            "Пятница",
+            "Суббота",
+            "Воскресенье",
+        ]
         current_day = weekday_map[datetime.now().weekday()]
 
         prompt = (
-            main_prompt
-            .replace("{text}", text)
+            main_prompt.replace("{text}", text)
             .replace("{current_date}", current_date)
             .replace("{current_day}", current_day)
         )

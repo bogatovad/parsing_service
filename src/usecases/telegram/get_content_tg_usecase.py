@@ -2,10 +2,12 @@ import logging
 from datetime import datetime
 from dateutil.parser import parse
 
-from dedup import check_and_add_event
+from usecases.telegram.dedup import check_and_add_event
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import NLPProcessorBase
+from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
+    NLPProcessorBase,
+)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -19,10 +21,18 @@ class GetContentTgUseCase:
      4) Проверяет дубликаты (check_and_add_event)
      5) Сохраняет в репозиторий
     """
-    def __init__(self, gateway: BaseGateway, nlp_processor: NLPProcessorBase, content_repo):
+
+    def __init__(
+        self,
+        gateway: BaseGateway,
+        nlp_processor: NLPProcessorBase,
+        content_repo,
+        file_repo,
+    ):
         self.gateway = gateway
         self.nlp_processor = nlp_processor
         self.content_repo = content_repo
+        self.file_repo = file_repo
 
     def execute(self):
         results = []
@@ -49,7 +59,9 @@ class GetContentTgUseCase:
                 for evt in processed_events:
                     content = self._create_schema(evt, raw, city)
                     if not content:
-                        logging.debug("Не удалось создать ContentPydanticSchema, пропускаем.")
+                        logging.debug(
+                            "Не удалось создать ContentPydanticSchema, пропускаем."
+                        )
                         continue
 
                     # Здесь проверяем дубликат
@@ -70,7 +82,9 @@ class GetContentTgUseCase:
 
         return results
 
-    def _create_schema(self, event: dict, raw: dict, city: str) -> ContentPydanticSchema | None:
+    def _create_schema(
+        self, event: dict, raw: dict, city: str
+    ) -> ContentPydanticSchema | None:
         """
         Приводит dict от нейросети к ContentPydanticSchema. Парсит даты, выставляет уникальный ID.
         """
@@ -101,7 +115,7 @@ class GetContentTgUseCase:
             location=location,
             cost=cost,
             city=city,
-            unique_id=unique_id
+            unique_id=unique_id,
         )
 
     @staticmethod
@@ -111,6 +125,6 @@ class GetContentTgUseCase:
         if isinstance(value, str):
             try:
                 return parse(value)
-            except:
+            except:  # noqa: E722
                 pass
         return datetime.now()  # fallback
