@@ -5,6 +5,9 @@ from dateutil.parser import parse
 from usecases.telegram.dedup import check_and_add_event
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
+from interface_adapters.repositories.base_content_repository import (
+    ContentRepositoryProtocol,
+)
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
@@ -26,7 +29,7 @@ class GetContentTgUseCase:
         self,
         gateway: BaseGateway,
         nlp_processor: NLPProcessorBase,
-        content_repo,
+        content_repo: ContentRepositoryProtocol,
         file_repo,
     ):
         self.gateway = gateway
@@ -77,7 +80,7 @@ class GetContentTgUseCase:
                         continue
 
                     logging.info(f"Сохраняем новое событие: {content}")
-                    self.content_repo.save(content)
+                    self.content_repo.save_one_content(content)
                     results.append(content)
 
         return results
