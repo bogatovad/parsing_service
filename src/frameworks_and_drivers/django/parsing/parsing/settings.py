@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_celery_beat",
+    "django_celery_results",
     "frameworks_and_drivers.django.parsing.data_manager",
 ]
 
