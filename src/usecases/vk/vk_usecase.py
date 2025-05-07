@@ -1,5 +1,4 @@
 import logging
-import re
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
@@ -7,8 +6,6 @@ from datetime import datetime
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
-from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
-from usecases.common import AbstractUseCase
 
 
 logging.basicConfig(
@@ -59,6 +56,7 @@ class GetContentVkUseCase(AbstractUseCase):
                         logger.info("Схема создана")
                         logger.info(f"Save content from VK")
                         self.content_repo.save_one_content(content)
+
         return True
 
     @staticmethod

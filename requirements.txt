@@ -17,4 +17,4 @@ vk_api
 pillow
 olefile
 RapidFuzz
-
+django-celery-results

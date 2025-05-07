@@ -44,7 +44,7 @@ class GetContentKudaGoController:
             return True
         except Exception:
             raise RunUsecaseException
-        
+
 
 class GetContentVKController:
     def __init__(self, usecase_factory: UseCaseFactory):

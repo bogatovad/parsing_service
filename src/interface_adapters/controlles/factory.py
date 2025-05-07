@@ -61,7 +61,7 @@ class UseCaseFactory:
             content_repo=ContentRepositoryProtocol(),
             file_repo=FileRepositoryProtocol(),
         )
-    
+
     @staticmethod
     def get_vk_content_usecase() -> GetContentVkUseCase:
         return GetContentVkUseCase(

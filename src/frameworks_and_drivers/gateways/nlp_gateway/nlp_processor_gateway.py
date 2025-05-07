@@ -4,7 +4,6 @@ import requests
 import yaml
 import logging
 import os
-from datetime import datetime
 
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,

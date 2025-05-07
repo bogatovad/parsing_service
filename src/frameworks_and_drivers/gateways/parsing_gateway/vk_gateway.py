@@ -1,4 +1,3 @@
-import time
 import vk_api
 from frameworks_and_drivers.gateways.parsing_gateway.exeptions import (
     ExeptionCheckAnswerKeys,

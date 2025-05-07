@@ -104,7 +104,9 @@ class TelegramGateway(BaseGateway):
             file_obj = BytesIO()
             self.client.download_media(msg.media, file=file_obj)
             image_bytes = file_obj.getvalue()
-            logging.debug("Изображение скачано успешно, размер (байт): %s", len(image_bytes))
+            logging.debug(
+                "Изображение скачано успешно, размер (байт): %s", len(image_bytes)
+            )
         except Exception as e:
             logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
         return image_bytes
@@ -133,7 +135,9 @@ class TelegramGateway(BaseGateway):
                 return ""
 
             # Склеим все строки OCR в одну строку, убирая повторные пробелы/переносы
-            recognized_text = " ".join(item[1].strip() for item in result if item[1].strip())
+            recognized_text = " ".join(
+                item[1].strip() for item in result if item[1].strip()
+            )
             recognized_text = re.sub(r"\s+", " ", recognized_text).strip()
 
             if not recognized_text:
@@ -187,7 +191,9 @@ class TelegramGateway(BaseGateway):
 
                 # Проверяем, есть ли изображение
                 if self.is_image_message(msg):
-                    logging.debug("Сообщение ID=%s содержит изображение. Скачиваем...", msg.id)
+                    logging.debug(
+                        "Сообщение ID=%s содержит изображение. Скачиваем...", msg.id
+                    )
                     image_bytes = self.get_image_bytes(msg)
                     pic_text = self._extract_text_from_image(image_bytes)
                 else:
@@ -198,19 +204,23 @@ class TelegramGateway(BaseGateway):
                     combined_text += pic_text
                     logging.debug("Добавлен текст OCR:\n%s", pic_text)
 
-                events.append({
-                    "event_id": str(msg.id),
-                    "channel": channel,
-                    "text": combined_text,
-                    "links": links,
-                    "date": msg.date.isoformat() if msg.date else None,
-                    "city": city,
-                    "image": image_bytes
-                })
+                events.append(
+                    {
+                        "event_id": str(msg.id),
+                        "channel": channel,
+                        "text": combined_text,
+                        "links": links,
+                        "date": msg.date.isoformat() if msg.date else None,
+                        "city": city,
+                        "image": image_bytes,
+                    }
+                )
 
                 logging.debug(f"Итоговый текст сообщения ID={msg.id}:\n{combined_text}")
                 logging.debug(f"=== Конец обработки сообщения ID={msg.id} ===")
             except Exception as e:
-                logging.error(f"Ошибка при обработке сообщения ID={msg.id}: {e}", exc_info=True)
+                logging.error(
+                    f"Ошибка при обработке сообщения ID={msg.id}: {e}", exc_info=True
+                )
 
         return events
