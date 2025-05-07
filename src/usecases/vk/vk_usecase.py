@@ -11,17 +11,13 @@ from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGa
 from usecases.common import AbstractUseCase
 
 
-logger = logging.getLogger("logger_vk_usecase")
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()],  # Чтобы лог был и в консоли (Docker log)
+)
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-console_handler.setFormatter(formatter)
-
-
-logger.addHandler(console_handler)
+logger = logging.getLogger(__name__)
 
 
 class GetContentVkUseCase(AbstractUseCase):
@@ -38,28 +34,31 @@ class GetContentVkUseCase(AbstractUseCase):
         self.file_repo = file_repo
 
     def execute(self) -> bool:
-        raw_contents = self.gateway.fetch_content()
-        logger.info(f"Всего данных собрано {len(raw_contents)}")
-
-        if not raw_contents:
-            return False
-
-        exists_unique_ids = self.content_repo.get_all_unique_ids()
-
-        for raw in raw_contents:
-            processed_result = self.nlp_processor.process_post(raw)
-            if not processed_result:
+        sources = self.gateway.get_sources()  # correct
+        for source in sources:
+            raw_content = self.gateway.fetch_content(source)
+            if not raw_content:
                 continue
-            for event in processed_result:
-                unique_id = event.get("id", "")
-                if unique_id in exists_unique_ids:
+
+            exists_unique_ids = self.content_repo.get_all_unique_ids()
+
+            for raw in raw_content:
+                processed_result = self.nlp_processor.process_post(raw)
+                if not processed_result:
+                    logger.info("Контента нет:")
                     continue
 
-                content = self._create_schema_from_event(event, unique_id)
-                if content:
-                    logger.info("Схема создана")
-                    logger.info(f"Save content from VK")
-                    self.content_repo.save_one_content(content)
+                for event in processed_result:
+                    unique_id = event.get("id", "")
+                    if unique_id in exists_unique_ids:
+                        logger.info(f"Пост уже добавлен.")
+                        continue
+
+                    content = self._create_schema_from_event(event, unique_id)
+                    if content:
+                        logger.info("Схема создана")
+                        logger.info(f"Save content from VK")
+                        self.content_repo.save_one_content(content)
         return True
 
     @staticmethod
