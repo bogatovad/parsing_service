@@ -100,7 +100,7 @@ def parsing_data_from_timepad_task():
 
                 print(f"Добавлено: {name}")
 
-    import_places("../../../../places_fixed.json")
+    import_places("../../../../../places_fixed.json")
 
     # controller_timepad.get_content()
 

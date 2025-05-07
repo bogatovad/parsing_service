@@ -84,4 +84,4 @@ def import_places(file_path):
             print(f"Добавлено: {name}")
 
 
-import_places("../../../places_fixed.json")
+import_places("../../../../places_fixed.json")
