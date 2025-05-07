@@ -158,18 +158,18 @@ AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT
 
 
 CELERY_BEAT_SCHEDULE = {
-    # "example-task-tg-10-05am": {
-    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_tg_task",
-    #     "schedule": crontab(minute="*/5"),
-    # },
+    "example-task-tg-10-05am": {
+        "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_tg_task",
+        "schedule": crontab(minute="*/1"),
+    },
     # "example-task-kudago-10-10am": {
     #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_kudago_task",
     #     "schedule": crontab(minute="*/1"),
     # },
-    "example-task-timepad-10-10am": {
-        "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_timepad_task",
-        "schedule": crontab(minute="*/1"),
-    },
+    # "example-task-timepad-10-10am": {
+    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_timepad_task",
+    #     "schedule": crontab(minute="*/1"),
+    # },
     # "example-task-vk-10-05am": {
     #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_vk_task",
     #     "schedule": crontab(minute="*/3"),
