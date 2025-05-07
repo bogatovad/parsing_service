@@ -1,7 +1,7 @@
 from frameworks_and_drivers.gateways.nlp_gateway.nlp_processor_gateway import (
     NLPProcessor,
 )
-from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway import (
+from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway1 import (
     KudaGoGateway,
 )
 from frameworks_and_drivers.gateways.parsing_gateway.tg_gateway import TelegramGateway
