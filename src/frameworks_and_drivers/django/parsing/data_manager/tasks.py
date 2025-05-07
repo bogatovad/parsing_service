@@ -1,3 +1,5 @@
+import random
+
 from celery import shared_task
 
 from interface_adapters.controlles.content_controller import (
@@ -53,7 +55,7 @@ def import_places(arr):
         location = place["address"]
         contact = {"phone": place.get("phone", "-")}
         city = "nn"
-        unique_id = place["id"]
+        unique_id = place["id"] + random.randint(1, 10000)
         category_name = determine_category(name, description)
 
         # Create or get tag
