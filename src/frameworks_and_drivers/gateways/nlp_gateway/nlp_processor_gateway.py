@@ -159,3 +159,29 @@ class NLPProcessor(NLPProcessorBase):
             evt.update(post_copy)
 
         return events
+
+    def determine_category(self, event_text: str) -> str:
+        """
+        Определяет категорию мероприятия.
+        Использует шаблон category_prompt из YAML.
+        Возвращает строку с категорией, полученную из API.
+        """
+        category_prompt_template = self.prompt_config.get(
+            "category_prompt", "Определи категорию: {text}"
+        )
+        prompt = category_prompt_template.format(text=event_text)
+        result = self._call_api(prompt, service="thebai")
+        return result
+
+    def generate_link_title(self, event_text: str) -> str:
+        """
+        Генерирует название для ссылки.
+        Использует шаблон link_title_prompt из YAML.
+        Возвращает сгенерированное название как строку.
+        """
+        link_prompt_template = self.prompt_config.get(
+            "link_title_prompt", "Придумай название для ссылки: {text}"
+        )
+        prompt = link_prompt_template.format(text=event_text)
+        result = self._call_api(prompt, service="thebai")
+        return result
