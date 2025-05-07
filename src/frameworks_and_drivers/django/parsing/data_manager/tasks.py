@@ -55,7 +55,7 @@ def import_places(arr):
         location = place["address"]
         contact = {"phone": place.get("phone", "-")}
         city = "nn"
-        unique_id = place["id"] + random.randint(1, 10000)
+        unique_id = str(place["id"]) + str(random.randint(1, 10000))
         category_name = determine_category(name, description)
 
         # Create or get tag
