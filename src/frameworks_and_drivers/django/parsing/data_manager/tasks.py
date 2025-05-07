@@ -7,7 +7,6 @@ from interface_adapters.controlles.content_controller import (
     GetContentVKController,
 )
 from interface_adapters.controlles.factory import UseCaseFactory
-import json
 import re
 import requests
 from django.core.files.base import ContentFile
@@ -48,8 +47,7 @@ def determine_category(name, description):
 
 def import_places(arr):
     for line in arr:
-        place = json.loads(line)
-
+        place = line
         name = place["name"]
         description = place["description"]
         location = place["address"]
