@@ -30,8 +30,16 @@ class GetPlacesUsecase:
         self.file_repo = file_repo
 
     def execute(self):
+        unique_names = []
+
         for line in arr:
             place = line
+
+            if place.get("name") in unique_names:
+                continue
+            else:
+                unique_names.append(place.get("name"))
+
             print(f"{place=}")
             name = place["name"]
             description = place["description"]
