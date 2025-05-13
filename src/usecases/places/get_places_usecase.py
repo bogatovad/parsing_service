@@ -45,7 +45,7 @@ class GetPlacesUsecase:
 
             # Create or get tag
             mc = MacroCategory.objects.filter(name="places").first()
-            tag_obj = Tags.objects.get_or_create(
+            tag_obj, _ = Tags.objects.get_or_create(
                 name=category_name, macro_category=mc, description="test"
             )
             print(f"{tag_obj=}")
@@ -82,5 +82,7 @@ class GetPlacesUsecase:
             if image_content:
                 filename = f"{unique_id}.jpg"
                 content.image.save(filename, image_content, save=True)
+
+            content.save()
 
             print(f"Добавлено: {name}")
