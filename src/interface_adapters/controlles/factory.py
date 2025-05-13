@@ -19,6 +19,7 @@ from usecases.telegram.get_content_tg_usecase import GetContentTgUseCase
 from usecases.timepad.timepad_usecase import GetContentTimepadUseCase
 from usecases.yandex_afisha.yandex_afisha_usecase import GetContentYandexAfishaUseCase
 from usecases.vk.vk_usecase import GetContentVkUseCase
+from usecases.places.get_places_usecase import GetPlacesUsecase
 from frameworks_and_drivers.repositories.content_repository import (
     ContentRepositoryProtocol,
 )
@@ -65,6 +66,15 @@ class UseCaseFactory:
     @staticmethod
     def get_vk_content_usecase() -> GetContentVkUseCase:
         return GetContentVkUseCase(
+            gateway=ParsingVK(),
+            nlp_processor=NLPProcessor(),
+            content_repo=ContentRepositoryProtocol(),
+            file_repo=FileRepositoryProtocol(),
+        )
+
+    @staticmethod
+    def get_place_content_usecase() -> GetPlacesUsecase:
+        return GetPlacesUsecase(
             gateway=ParsingVK(),
             nlp_processor=NLPProcessor(),
             content_repo=ContentRepositoryProtocol(),
