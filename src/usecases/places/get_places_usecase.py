@@ -1,5 +1,4 @@
 from frameworks_and_drivers.django.parsing.data_manager.models import (
-    MacroCategory,
     Tags,
     Content,
 )
@@ -52,10 +51,8 @@ class GetPlacesUsecase:
             )
 
             # Create or get tag
-            mc = MacroCategory.objects.filter(name="places").first()
-            tag_obj, _ = Tags.objects.get_or_create(
-                name=category_name, macro_category=mc, description="test"
-            )
+            tag_obj = Tags.objects.filter(name=category_name)
+            tag_obj = tag_obj.first()
             print(f"{tag_obj=}")
 
             # Download image
