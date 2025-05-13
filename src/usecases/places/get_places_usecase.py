@@ -10,6 +10,7 @@ from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGa
 from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
+from usecases.places.data import arr
 from django.core.files.base import ContentFile
 import random
 import requests
@@ -28,7 +29,7 @@ class GetPlacesUsecase:
         self.content_repo = content_repo
         self.file_repo = file_repo
 
-    def execute(self, arr):
+    def execute(self):
         for line in arr:
             place = line
             print(f"{place=}")
