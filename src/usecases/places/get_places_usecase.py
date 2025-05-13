@@ -11,7 +11,6 @@ from interface_adapters.repositories.base_content_repository import (
 )
 from usecases.places.data import arr
 from django.core.files.base import ContentFile
-import random
 import requests
 
 
@@ -29,15 +28,14 @@ class GetPlacesUsecase:
         self.file_repo = file_repo
 
     def execute(self):
-        unique_names = []
+        unique_ids = self.content_repo.get_all_unique_ids()
 
         for line in arr:
             place = line
+            unique_id = str(place["id"]) + "place"
 
-            if place.get("name") in unique_names:
+            if unique_id in unique_ids:
                 continue
-            else:
-                unique_names.append(place.get("name"))
 
             print(f"{place=}")
             name = place["name"]
@@ -45,7 +43,6 @@ class GetPlacesUsecase:
             location = place["address"]
             contact = [{"phone": place.get("phone", "-")}]
             city = "nn"
-            unique_id = str(place["id"]) + str(random.randint(1, 10000))
             category_name = self.nlp_processor.determine_category(
                 description + name, "category_prompt_place"
             )
