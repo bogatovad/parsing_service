@@ -61,7 +61,7 @@ def import_places(arr):
 
         # Create or get tag
         mc = MacroCategory.objects.filter(name="places").first()
-        tag_obj, _ = Tags.objects.create(
+        tag_obj = Tags.objects.create(
             name=category_name, macro_category=mc, description="test"
         )
         print(f"{tag_obj=}")
