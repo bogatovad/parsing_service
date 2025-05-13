@@ -39,7 +39,9 @@ class GetPlacesUsecase:
             contact = [{"phone": place.get("phone", "-")}]
             city = "nn"
             unique_id = str(place["id"]) + str(random.randint(1, 10000))
-            category_name = self.nlp_processor.determine_category(description + name)
+            category_name = self.nlp_processor.determine_category(
+                description + name, "category_prompt_place"
+            )
 
             # Create or get tag
             mc = MacroCategory.objects.filter(name="places").first()

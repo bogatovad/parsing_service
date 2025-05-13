@@ -160,14 +160,16 @@ class NLPProcessor(NLPProcessorBase):
 
         return events
 
-    def determine_category(self, event_text: str) -> str:
+    def determine_category(
+        self, event_text: str, service: str = "category_prompt"
+    ) -> str:
         """
         Определяет категорию мероприятия.
         Использует шаблон category_prompt из YAML.
         Возвращает строку с категорией, полученную из API.
         """
         category_prompt_template = self.prompt_config.get(
-            "category_prompt", "Определи категорию: {text}"
+            service, "Определи категорию: {text}"
         )
         prompt = category_prompt_template.format(text=event_text)
         result = self._call_api(prompt, service="thebai")
