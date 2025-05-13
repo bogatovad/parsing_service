@@ -50,6 +50,7 @@ def determine_category(name, description):
 def import_places(arr):
     for line in arr:
         place = line
+        print(f"{place=}")
         name = place["name"]
         description = place["description"]
         location = place["address"]
@@ -63,6 +64,7 @@ def import_places(arr):
         tag_obj, _ = Tags.objects.get_or_create(
             name=category_name, macro_category=mc, description="test"
         )
+        print(f"{tag_obj=}")
 
         # Download image
         image_url = place["image"]
