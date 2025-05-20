@@ -22,11 +22,10 @@ class TelegramGateway(BaseGateway):
         """
         # Session-строка для авторизации клиента
         string = (
-            "1ApWapzMBu2BNT4SectEoG19zFpAL64hVdg9UNVgDoWYlX9kcpBqB3wy87A-_gQT"
-            "u5ZB1RWzyft7fBQI9S0tNryjIcpNGH7dnyU13fQN0gAwft_3gePRrh5oF2XgnMk_bN3"
-            "3bwI15TAMUSbmZQUlzwYmmS-NIDhH-YzTJ5YHY_UjYu3v7ME9UZ-oiFnvXzTL6_lN_KVeMw78"
-            "cqNguzy2W9JUHsw_zSu1qgHJwlT9a4IsIRgBOpK53eWOzMjZP0zuq39U4MGHoulGcGN-wKgYUhKP8zeD5Glxq_g"
-            "yWv0tvBq6COknZRtSSAacLhN5w9Re5NfQ53OCNDyIlBpdYhP9vmZIdRK-b2A8="
+            "1ApWapzMBuxm4BydlDfdR1q_uprG8d8Okvgj-uL9QVLOigYPgDvITZLjCuq-VEVamdHsqlCPOGQ8dAv3m4Ax-Mu6ARVOaeCKK9e6H"
+            "7xj06Eud7KH_keGun4_gbKCnlTJp4Us2HnFdCW31Rrt40NC95-DRPOdZkWHKZ4czSw6NmEm7L_RC-f84DafHqpMJUkYIs8v0SJVTRH"
+            "i5N3f56bjCAokiPG7BRYuUILCwnnXuHB4VFJmA-z9MNLm4mkCZOhOZx6rwiD6HTWTWjcsM5uOUtqpDdVjR-LZ_1XVkFvYOqpT7T5Dix"
+            "TfLF6xlbpsq2tJE3vELUyvxKBXbsR4lM8wihAcnoqrRT0Q="
         )
 
         # Список каналов. По структуре: [(имя_канала, город), ...]
