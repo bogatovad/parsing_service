@@ -28,9 +28,9 @@ controller_place = PlacesController(usecase_factory=factory_usecase)
 # controller_timepad.get_content()
 
 
-@shared_task
-def parsing_data_from_tg_task():
-    controller_tg.get_content()
+# @shared_task
+# def parsing_data_from_tg_task():
+#     controller_tg.get_content()
 
 
 #
@@ -39,7 +39,8 @@ def parsing_data_from_tg_task():
 # def parsing_data_from_kudago_task():
 #     controller_kuda_go.get_content()
 #
-#
-# @shared_task
-# def parsing_data_from_vk_task():
-#     controller_vk.get_content()
+
+
+@shared_task
+def parsing_data_from_vk_task():
+    controller_vk.get_content()
