@@ -6,24 +6,29 @@ from telethon.sessions import StringSession
 
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 
-import easyocr  # <-- Добавлено
-from PIL import Image  # <-- Добавлено
+import easyocr
+from PIL import Image
+import re
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # при желании можно level=logging.INFO
 logging.getLogger("telethon").setLevel(logging.WARNING)
 
 
 class TelegramGateway(BaseGateway):
-    def __init__(self, client=None) -> None:
+    def __init__(self) -> None:
+        """
+        Класс, отвечающий за получение сообщений из Telegram-каналов,
+        вычитывание OCR с изображений и подготовку сырых постов для дальнейшей обработки.
+        """
+        # Session-строка для авторизации клиента
         string = (
-            "1ApWapzMBu2BNT4SectEoG19zFpAL64hVdg9UNVgDoWYlX9kcpBqB3wy87A-_gQT"
-            "u5ZB1RWzyft7fBQI9S0tNryjIcpNGH7dnyU13fQN0gAwft_3gePRrh5oF2XgnMk_bN3"
-            "3bwI15TAMUSbmZQUlzwYmmS-NIDhH-YzTJ5YHY_UjYu3v7ME9UZ-oiFnvXzTL6_lN_KVeMw78"
-            "cqNguzy2W9JUHsw_zSu1qgHJwlT9a4IsIRgBOpK53eWOzMjZP0zuq39U4MGHoulGcGN-wKgYUhKP8zeD5Glxq_g"
-            "yWv0tvBq6COknZRtSSAacLhN5w9Re5NfQ53OCNDyIlBpdYhP9vmZIdRK-b2A8="
+            "1ApWapzMBuxm4BydlDfdR1q_uprG8d8Okvgj-uL9QVLOigYPgDvITZLjCuq-VEVamdHsqlCPOGQ8dAv3m4Ax-Mu6ARVOaeCKK9e6H"
+            "7xj06Eud7KH_keGun4_gbKCnlTJp4Us2HnFdCW31Rrt40NC95-DRPOdZkWHKZ4czSw6NmEm7L_RC-f84DafHqpMJUkYIs8v0SJVTRH"
+            "i5N3f56bjCAokiPG7BRYuUILCwnnXuHB4VFJmA-z9MNLm4mkCZOhOZx6rwiD6HTWTWjcsM5uOUtqpDdVjR-LZ_1XVkFvYOqpT7T5Dix"
+            "TfLF6xlbpsq2tJE3vELUyvxKBXbsR4lM8wihAcnoqrRT0Q="
         )
 
-        # Каналы оставляем как есть
+        # Список каналов. По структуре: [(имя_канала, город), ...]
         self.channels = [
             ("@opera_nn", "nn"),
             ("@moynizhny", "nn"),
@@ -45,19 +50,22 @@ class TelegramGateway(BaseGateway):
             ("@nnevents_best", "nn"),
             ("@naukann", "nn"),
         ]
-        # Инициализируем клиент Телеграм
+
         self.client = TelegramClient(
-            StringSession(string), 29534008, "7e0ecc08aefbd1039bc9929197e051d5"
+            StringSession(string),
+            29534008,  # ваш api_id
+            "7e0ecc08aefbd1039bc9929197e051d5",  # ваш api_hash
         )
         self._run_auth()
 
-        # Инициализируем OCR
+        # EasyOCR для распознавания текста на картинках
         self.ocr_reader = easyocr.Reader(["ru", "en"], gpu=False)
 
     def _run_auth(self) -> None:
         self.client.connect()
         if not self.client.is_user_authorized():
             raise Exception("TelegramClient не авторизован!")
+        logging.debug("TelegramClient авторизован.")
 
     @staticmethod
     def get_links(msg) -> list[str]:
@@ -70,94 +78,148 @@ class TelegramGateway(BaseGateway):
                         if hasattr(entity, "url") and entity.url
                         else msg.message[entity.offset : entity.offset + entity.length]
                     )
-                    # Игнорируем служебные t.me-ссылки
+                    # Игнорируем служебные ссылки t.me
                     if "https://t.me" in url:
                         continue
                     links.append(url)
         return links
 
+    def is_image_message(self, msg) -> bool:
+        """
+        Проверяем, является ли вложение сообщением с изображением.
+        """
+        if msg.photo:
+            return True
+        if msg.document and getattr(msg.document, "mime_type", None):
+            return msg.document.mime_type.startswith("image/")
+        return False
+
     def get_image_bytes(self, msg) -> bytes:
-        image_bytes = None
-        if msg.media:
-            try:
-                file_obj = BytesIO()
-                self.client.download_media(msg.media, file=file_obj)
-                image_bytes = file_obj.getvalue()
-                logging.info("image has been downloaded.")
-            except Exception as e:
-                logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
+        """
+        Скачиваем байты изображения из сообщения, если оно изображение.
+        """
+        image_bytes = b""
+        try:
+            file_obj = BytesIO()
+            self.client.download_media(msg.media, file=file_obj)
+            image_bytes = file_obj.getvalue()
+            logging.debug(
+                "Изображение скачано успешно, размер (байт): %s", len(image_bytes)
+            )
+        except Exception as e:
+            logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
         return image_bytes
 
     def _extract_text_from_image(self, image_bytes: bytes) -> str:
         """
         Извлекает текст с помощью easyocr и возвращает его
-        с префиксом ocr_prefix'.
+        с префиксом, если распознанный текст не пуст.
         """
-        ocr_prefix = (
-            "[Далее будет указан текст с изображения прикреплённого к посту, если на нём есть какая-то "
-            "дополнительная информация - адрес, телефон, цена или что-то ещё ценное, чего нет в тексте, то "
-            "добавь это в json. Если информация дублируется по разному, то в приоритете данные из "
-            "текста поста.]"
-        )
         if not image_bytes:
+            logging.debug("Пустые байты для OCR, пропускаем.")
             return ""
 
+        ocr_prefix = (
+            "Далее будет указан текст с изображения прикреплённого к посту, "
+            "если на нём есть какая-то дополнительная информация (адрес, телефон, цена и т.д.), "
+            "добавь это в json. Если информация дублируется по разному, "
+            "то в приоритете данные из текста поста. Текст с картинки:"
+        )
         try:
             pil_image = Image.open(BytesIO(image_bytes))
             result = self.ocr_reader.readtext(pil_image)
 
             if not result:
+                logging.debug("EasyOCR не распознала текст на изображении.")
                 return ""
 
-            recognized_text = "\n".join(
-                [item[1].strip() for item in result if item[1].strip()]
+            # Склеим все строки OCR в одну строку, убирая повторные пробелы/переносы
+            recognized_text = " ".join(
+                item[1].strip() for item in result if item[1].strip()
             )
+            recognized_text = re.sub(r"\s+", " ", recognized_text).strip()
+
             if not recognized_text:
+                logging.debug("OCR вернула пустой текст после очистки.")
                 return ""
+
+            logging.debug("OCR вернула текст:\n%s", recognized_text)
             return f"\n{ocr_prefix}\n{recognized_text}"
         except Exception as e:
-            logging.error(f"Ошибка OCR: {e}", exc_info=True)
+            logging.error(f"Ошибка OCR (возможно, не изображение): {e}", exc_info=True)
             return ""
 
-    def fetch_content(self) -> list[dict]:
+    def get_sources(self):
+        return self.channels
+
+    def fetch_content(self, channel: str, city: str) -> list[dict]:
         """
-        Получает сообщения из указанных каналов, добавляет
-        к сообщению ссылку и текст, распознанный из картинки.
+        Получает сообщения из Telegram-канала, вычленяет ссылки,
+        распознаёт OCR, возвращает список словарей с полями:
+          - event_id
+          - channel
+          - text
+          - links
+          - date
+          - city
+          - image (байты)
         """
         events = []
-        for channel, city in self.channels:
-            logging.info(f"processing {channel}")
-            messages = self.client.get_messages(channel, limit=10)
-            logging.info("messages have been received.")
+        logging.debug(f"Получаем сообщения из канала: {channel}, город: {city}")
+        messages = self.client.get_messages(channel, limit=15)  # 15 сообщений, например
+        logging.debug("Из канала %s получено сообщений: %s", channel, len(messages))
 
-            for msg in messages:
-                if msg.message:
-                    try:
-                        image_bytes = self.get_image_bytes(msg)
-                        links = self.get_links(msg)
-                        logging.info("links has been got.")
-                        pic_text = self._extract_text_from_image(image_bytes)
-                        combined_text = msg.message
+        for msg in messages:
+            if not msg.message:
+                logging.debug(f"Сообщение ID={msg.id} пустое, пропускаем.")
+                continue
 
-                        if links:
-                            combined_text += "\n" + "\n".join(links)
+            try:
+                logging.debug(f"=== Начало обработки сообщения ID={msg.id} ===")
 
-                        if pic_text:
-                            combined_text += pic_text
+                # Извлекаем ссылки
+                links = self.get_links(msg)
+                if links:
+                    logging.debug("Извлечённые ссылки: %s", links)
 
-                        events.append(
-                            {
-                                "event_id": str(msg.id),
-                                "channel": channel,
-                                "text": combined_text,
-                                "links": links,
-                                "date": msg.date.isoformat() if msg.date else None,
-                                "city": city,
-                                "image": image_bytes,
-                            }
-                        )
-                        logging.info("events has been processed.")
-                    except Exception as e:
-                        logging.error(f"error while processing message from tg: {e}")
+                combined_text = msg.message
+                logging.debug("Исходный текст сообщения:\n%s", combined_text)
+
+                if links:
+                    combined_text += "\n" + "\n".join(links)
+
+                # Проверяем, есть ли изображение
+                if self.is_image_message(msg):
+                    logging.debug(
+                        "Сообщение ID=%s содержит изображение. Скачиваем...", msg.id
+                    )
+                    image_bytes = self.get_image_bytes(msg)
+                    pic_text = self._extract_text_from_image(image_bytes)
+                else:
+                    image_bytes = b""
+                    pic_text = ""
+
+                if pic_text:
+                    combined_text += pic_text
+                    logging.debug("Добавлен текст OCR:\n%s", pic_text)
+
+                events.append(
+                    {
+                        "event_id": str(msg.id),
+                        "channel": channel,
+                        "text": combined_text,
+                        "links": links,
+                        "date": msg.date.isoformat() if msg.date else None,
+                        "city": city,
+                        "image": image_bytes,
+                    }
+                )
+
+                logging.debug(f"Итоговый текст сообщения ID={msg.id}:\n{combined_text}")
+                logging.debug(f"=== Конец обработки сообщения ID={msg.id} ===")
+            except Exception as e:
+                logging.error(
+                    f"Ошибка при обработке сообщения ID={msg.id}: {e}", exc_info=True
+                )
 
         return events

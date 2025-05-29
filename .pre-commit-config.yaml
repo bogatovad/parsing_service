@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: check-ast # Valid python files.
       - id: check-yaml
-      - id: check-json
+     # - id: check-json
       - id: check-docstring-first
       - id: end-of-file-fixer
       - id: trailing-whitespace

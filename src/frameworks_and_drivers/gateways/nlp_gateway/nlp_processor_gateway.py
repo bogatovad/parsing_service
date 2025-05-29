@@ -1,24 +1,24 @@
+from datetime import datetime
 import json
 import requests
 import yaml
 import logging
 import os
-import datetime
+
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class NLPProcessor(NLPProcessorBase):
-    def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
-        """
-        Инициализирует NLPProcessor.
-        Загружает конфигурацию (ключи API, число попыток, интервалы) из JSON-файла,
-        а также промпты из YAML-файла.
-        """
+    """
+    Класс, отвечающий за вызов LLM (theb.ai / openrouter),
+    формирование промптов и разбор ответа в список событий.
+    """
 
+    def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
         self.thebai_api_url = os.getenv(
             "THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions"
         )
@@ -33,33 +33,34 @@ class NLPProcessor(NLPProcessorBase):
         with open(prompt_file, "r", encoding="utf-8") as f:
             self.prompt_config = yaml.safe_load(f)
 
+        logging.debug(
+            "NLPProcessor инициализирован. Промпты загружены из: %s", prompt_file
+        )
+
     def _parse_response(self, response_text: str) -> list:
-        """
-        Обрабатывает ответ от нейросети, предполагая, что он представляет собой валидный JSON-список.
-        Если ответ равен "[НЕ АФИША]", возвращает пустой список.
-        Если возвращен словарь, оборачивает его в список.
-        Если парсинг не удаётся, сохраняет ответ в файл для отладки и возвращает пустой список.
-        """
+        logging.debug("Парсим ответ нейросети: %s", response_text)
+        if not response_text:
+            return []
+        if response_text.strip() == "[НЕ АФИША]":
+            logging.debug("Ответ: [НЕ АФИША]. Вернём пустой список.")
+            return []
         try:
-            if response_text.strip() == "[НЕ АФИША]":
+            parsed = json.loads(response_text)
+            if isinstance(parsed, list):
+                return parsed
+            elif isinstance(parsed, dict):
+                return [parsed]
+            else:
+                logging.debug("Ответ не list и не dict.")
                 return []
-            try:
-                parsed = json.loads(response_text)
-                print(f"{parsed=}")
-                if isinstance(parsed, list):
-                    return parsed
-                elif isinstance(parsed, dict):
-                    return [parsed]
-                else:
-                    return []
-            except Exception as e:
-                logging.error(f"Ошибка парсинга ответа: {e}")
-                return []
-        except:  # noqa: E722
+        except Exception as e:
+            logging.error(f"Ошибка парсинга ответа: {e}")
             return []
 
     def _send_request(self, url, api_key, model, prompt):
-        """Отправляет запрос к API и обрабатывает ответ."""
+        logging.debug("Отправляем запрос к API: %s, модель=%s", url, model)
+        logging.debug("Промпт:\n%s", prompt)
+
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -71,23 +72,25 @@ class NLPProcessor(NLPProcessorBase):
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
-            response.raise_for_status()
-            response_data = response.json()
-            choices = response_data.get("choices", [])
-
+            resp = requests.post(url, headers=headers, json=payload, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            choices = data.get("choices", [])
             if not choices:
-                logging.warning("API вернул пустой список choices.")
-                return []
-            return choices[0]["message"]["content"]
-        except:  # noqa: E722
-            return []
+                logging.warning("API вернул пустые choices.")
+                return ""
+            content = choices[0]["message"]["content"]
+            logging.debug("Ответ API:\n%s", content)
+            return content
+        except Exception as e:
+            logging.error(f"Ошибка при запросе к API: {e}")
+            return ""
 
-    def _call_api(self, prompt: str, service: str = "thebai") -> list:
+    def _call_api(self, prompt: str, service: str = "thebai") -> str:
         """
-        Унифицированный метод для вызова внешнего API с несколькими попытками.
-        Если service == "thebai", обращается к основному сервису, иначе – к openrouter.
-        Возвращает список словарей, полученных из API.
+        Унифицированный метод запроса:
+        service == 'thebai' => theb.ai
+        иначе openrouter.
         """
         if service == "thebai":
             url, api_key, model = self.thebai_api_url, self.thebai_api_key, "theb-ai-4"
@@ -97,51 +100,76 @@ class NLPProcessor(NLPProcessorBase):
                 self.openrouter_api_key,
                 "anthropic/claude-3.5-sonnet",
             )
-        result = self._send_request(url, api_key, model, prompt)
-        return result
 
-    def process(self, text: str) -> dict:
-        """
-        Основной метод обработки текста.
-        Использует промпт main_prompt из YAML, подставляет в него текст и вызывает _call_api.
-        Предполагается, что API вернет валидный JSON в виде списка.
-        Возвращает список словарей, где каждый словарь описывает отдельное событие.
-        """
-        main_prompt_template = self.prompt_config.get("main_prompt", "")
+        return self._send_request(url, api_key, model, prompt)
 
+    def process(self, text: str) -> list:
+        """
+        Главный метод: формирует промпт из main_prompt,
+        вызывает _call_api, парсит JSON-ответ.
+        Возвращает список словарей, каждый описывает событие.
+        """
+        main_prompt = self.prompt_config.get("main_prompt", "")
         current_date = datetime.now().strftime("%Y-%m-%d")
-
-        weekday_map = {
-            0: "Понедельник",
-            1: "Вторник",
-            2: "Среда",
-            3: "Четверг",
-            4: "Пятница",
-            5: "Суббота",
-            6: "Воскресенье",
-        }
+        weekday_map = [
+            "Понедельник",
+            "Вторник",
+            "Среда",
+            "Четверг",
+            "Пятница",
+            "Суббота",
+            "Воскресенье",
+        ]
         current_day = weekday_map[datetime.now().weekday()]
 
         prompt = (
-            main_prompt_template.replace("{text}", text)
+            main_prompt.replace("{text}", text)
             .replace("{current_date}", current_date)
             .replace("{current_day}", current_day)
         )
 
-        result_list = self._call_api(prompt, service="thebai")
-        result_list = self._parse_response(result_list)
-        if isinstance(result_list, list):
-            return result_list
-        return []
+        raw_response = self._call_api(prompt, service="thebai")
+        parsed_list = self._parse_response(raw_response)
+        logging.debug("Результат парсинга: %s объектов", len(parsed_list))
+        return parsed_list
 
-    def determine_category(self, event_text: str) -> str:
+    def process_post(self, post: dict) -> list:
+        """
+        Обрабатывает отдельный пост, выделяя text + image.
+        Возвращает список событий (каждый – dict).
+        """
+        # Копируем, чтобы не портить исходный словарь
+        post_copy = post.copy()
+
+        image_data = post_copy.pop("image", None)
+        text = post_copy.get("text", "")
+        if not text:
+            logging.info("Пост без текста – пропускаем.")
+            return []
+
+        logging.debug("Передаём в нейронку текст (длина=%s):\n%s", len(text), text)
+        events = self.process(text)
+        logging.debug("Нейронка вернула %s объектов", len(events))
+
+        for evt in events:
+            # Если нейронка не вложила 'image', подставляем наше
+            if "image" not in evt or evt["image"] is None:
+                evt["image"] = image_data
+            # Объединяем прочие поля (channel, city, date и т.д.)
+            evt.update(post_copy)
+
+        return events
+
+    def determine_category(
+        self, event_text: str, service: str = "category_prompt"
+    ) -> str:
         """
         Определяет категорию мероприятия.
         Использует шаблон category_prompt из YAML.
         Возвращает строку с категорией, полученную из API.
         """
         category_prompt_template = self.prompt_config.get(
-            "category_prompt", "Определи категорию: {text}"
+            service, "Определи категорию: {text}"
         )
         prompt = category_prompt_template.format(text=event_text)
         result = self._call_api(prompt, service="thebai")
@@ -159,26 +187,3 @@ class NLPProcessor(NLPProcessorBase):
         prompt = link_prompt_template.format(text=event_text)
         result = self._call_api(prompt, service="thebai")
         return result
-
-    def process_post(self, post: dict) -> list:
-        """
-        Обрабатывает пост, отделяя текст для нейронки от поля с изображением.
-        Передаёт текст в нейронку, а затем возвращает результат анализа вместе с данными изображения.
-        Предполагается, что в посте есть ключ "text" для основного текста и (опционально) ключ "image" с байтами изображения.
-        Возвращает список словарей – по одному на каждое событие, обнаруженное нейронкой.
-        """
-        post_copy = post.copy()
-        image_data = post_copy.pop("image", None)
-        text = post_copy.get("text", "")
-        if not text:
-            logging.info("Пост не содержит текста – пропускаем обработку.")
-            return []
-
-        analysis_results = self.process(text)
-
-        for event in analysis_results:
-            if "image" not in event or event.get("image") is None:
-                event["image"] = image_data
-            event.update(post_copy)
-
-        return analysis_results

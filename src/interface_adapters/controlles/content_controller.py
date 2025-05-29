@@ -44,3 +44,29 @@ class GetContentKudaGoController:
             return True
         except Exception:
             raise RunUsecaseException
+
+
+class GetContentVKController:
+    def __init__(self, usecase_factory: UseCaseFactory):
+        self.usecase_factory = usecase_factory
+
+    def get_content(self) -> bool:
+        """Get content from VK sources"""
+        try:
+            self.usecase_factory.get_vk_content_usecase().execute()
+            return True
+        except Exception:
+            raise RunUsecaseException
+
+
+class PlacesController:
+    def __init__(self, usecase_factory: UseCaseFactory):
+        self.usecase_factory = usecase_factory
+
+    def get_content(self) -> bool:
+        """Get content from VK sources"""
+        try:
+            self.usecase_factory.get_place_content_usecase().execute()
+            return True
+        except Exception:
+            raise RunUsecaseException

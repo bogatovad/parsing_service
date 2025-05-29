@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_celery_beat",
+    "django_celery_results",
     "frameworks_and_drivers.django.parsing.data_manager",
 ]
 
@@ -157,16 +158,24 @@ AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT
 
 
 CELERY_BEAT_SCHEDULE = {
-    "example-task-tg-10-05am": {
-        "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_tg_task",
-        "schedule": crontab(hour="*/1"),
-    },
+    # "example-task-tg-10-05am": {
+    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_tg_task",
+    #     "schedule": crontab(minute="*/1"),
+    # },
     # "example-task-kudago-10-10am": {
     #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_kudago_task",
-    #     "schedule": crontab(hour=9, minute=33),
+    #     "schedule": crontab(minute="*/1"),
     # },
     # "example-task-timepad-10-10am": {
     #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_timepad_task",
-    #     "schedule": crontab(hour=11, minute=50),
+    #     "schedule": crontab(minute="*/1"),
     # },
+    # "example-task-places": {
+    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_places_task",
+    #     "schedule": crontab(minute="*/1"),
+    # },
+    "example-task-vk-10-05am": {
+        "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_vk_task",
+        "schedule": crontab(minute="*/3"),
+    },
 }
