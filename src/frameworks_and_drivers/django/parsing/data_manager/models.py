@@ -19,10 +19,11 @@ class GenericModel(models.Model):
 
 class User(GenericModel):
     username = models.CharField(max_length=250)
+    user_id = models.BigIntegerField()
     city = models.CharField(max_length=50, choices=CITY_CHOICES, default="nn")
 
     def __str__(self):
-        return f"{self.username}"
+        return f"{str(self.user_id)}"
 
     class Meta:
         db_table = "event_user"
@@ -98,7 +99,7 @@ class Like(GenericModel):
         db_table = "event_like"
 
     def __str__(self):
-        return f"{self.user.username} - {self.content.name} - {self.value} - {self.created}"
+        return f"{self.user.name} - {self.content.name} - {self.value} - {self.created}"
 
 
 class Feedback(GenericModel):

@@ -35,7 +35,10 @@ class KudaGoAPIClient:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            logging.error(f"Request error: {e}")
+            if not '404' in str(e):
+                logging.error(f"Request error: {e}")
+            else:
+                pass
             return {}
 
 
@@ -54,6 +57,7 @@ class ImageDownloader:
 
 
 class EventParser:
+    BASE_URL = "https://kudago.com/public-api/v1.4"
     DATE_FORMAT = "%Y-%m-%d"
     DATETIME_FORMAT = "%d.%m.%Y %H:%M"
     WEEKDAYS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
@@ -64,6 +68,19 @@ class EventParser:
 
     def parse_event(self, event):
         details = self.api_client.get_event_details(event["id"])
+        #details = self.api_client.get_event_details(209952)
+        #получить место
+        if details['place'] == None:
+            text = details.get('body_text')
+            pattern = r'Улица.*?\.'
+
+            matches = re.findall(pattern, text)
+
+            details['place'] = {'title' : ' ', 'address' : matches[0], 'phone' : '-'} if len(matches) > 0 \
+                else {'title' : ' ', 'address' : 'Уточняйте у организаторов', 'phone' : '-'}
+
+        #if details.get("id") == 217464:
+        #    input(details)
 
         result = {
             "id": details.get("id", "-"),
@@ -79,7 +96,6 @@ class EventParser:
             "image": self.image_downloader.download(self._get_image_url(details)),
             "city": "nn",
             "time": self._parse_schedule(details),
-            "is_endless": details.get("dates", [{}])[-1].get("is_endless", False),
         }
 
         return result
@@ -88,6 +104,9 @@ class EventParser:
         if not price_text:
             return [0]
         numbers = re.findall(r"\d+", price_text)
+        if 'бесплатно' in price_text:
+            return [0]
+        numbers = [int(num) for num in numbers if int(num) > 10]
         return [int(n) for n in numbers] if numbers else [0]
 
     def _clean_text(self, text):
@@ -118,30 +137,120 @@ class EventParser:
         images = event.get("images", [])
         return images[0].get("image") if images else ""
 
-    def _parse_schedule(self, event_details):
-        dates = event_details.get("dates", [])
-        result = []
+    def _parse_schedule(self, event_details: dict):
+        week_day = {0: "пн", 1: "вт", 2: "ср", 3: "чт", 4: "пт", 5: "сб", 6: "вс"}
 
-        for date in dates:
-            schedules = date.get("schedules", [])
-            if schedules:
-                for sch in schedules:
-                    days = ", ".join(
-                        [self.WEEKDAYS[d] for d in sch.get("days_of_week", [])]
+        def format_time(time_str):
+            return ':'.join(time_str.split(':')[:2]) if time_str else None
+
+        def get_days_range(days, week_map):
+            if not days:
+                return ""
+            ranges = []
+            days = sorted(days)
+            start = end = days[0]
+
+            for day in days[1:]:
+                if day == end + 1:
+                    end = day
+                else:
+                    ranges.append((start, end))
+                    start = end = day
+            ranges.append((start, end))
+
+            return ', '.join([
+                f"{week_map[s]}–{week_map[e]}" if s != e else week_map[s]
+                for s, e in ranges
+            ])
+
+        def create_schedule_entry(days_str, start, end):
+            start_time = format_time(start)
+            end_time = format_time(end)
+
+            if not start_time:
+                return None
+
+            time_part = f"{start_time}–{end_time}" if end_time else f"с {start_time}"
+            return f"{days_str}: {time_part}".lower()
+
+        # Основная обработка расписания
+        timetable = []
+        current_time = time.time()
+        use_place_schedule = False
+
+        # Проверяем наличие use_place_schedule=True в dates
+        for date in event_details.get('dates', []):
+            if date.get('use_place_schedule', False):
+                use_place_schedule = True
+                break
+
+        # Если нужно использовать расписание места
+        if use_place_schedule:
+            place = event_details.get('place')
+            if place and place.get('id'):
+                try:
+                    response = requests.get(f"{self.BASE_URL}/places/{place['id']}")
+                    if response.status_code == 200:
+                        return response.json().get('timetable', '')
+                except requests.RequestException:
+                    pass  # Продолжаем обработку обычного расписания
+
+        # Обработка обычного расписания
+        for date in event_details.get('dates', []):
+            if not date.get('is_endless') and date.get('end', 0) < current_time:
+                continue
+
+            if date.get('schedules'):
+                for schedule in date['schedules']:
+                    days_str = get_days_range(schedule.get('days_of_week', []), week_day)
+                    entry = create_schedule_entry(
+                        days_str,
+                        schedule.get('start_time'),
+                        schedule.get('end_time')
                     )
-                    start = sch.get("start_time", "00:00:00")[:5]
-                    end = sch.get("end_time")
-                    time_range = f"{start}-{end[:5]}" if end else f"с {start}"
-                    result.append(f"{days}: {time_range}".lower())
-            else:
-                start_date = date.get("start_date") or datetime.now().strftime(
-                    self.DATE_FORMAT
-                )
-                result.append(
-                    f"{start_date} с {date.get('start_time', '00:00:00')[:5]}".lower()
-                )
+                    if entry:
+                        timetable.append(entry)
 
-        return "".join(result) if result else "Подробности в описании"
+            elif date.get('start_date'):
+                try:
+                    date_obj = datetime.strptime(date['start_date'], "%Y-%m-%d")
+                    date_str = date_obj.strftime("%d.%m")
+                except (ValueError, KeyError):
+                    date_str = ""
+
+                time_str = ""
+                if date.get('start_time'):
+                    time_str = format_time(date['start_time'])
+                    if date.get('end_time'):
+                        time_str += f"–{format_time(date['end_time'])}"
+                    else:
+                        time_str = f"с {time_str}"
+
+                if date_str and time_str:
+                    timetable.append(f"{date_str} {time_str}")
+
+        # Резервное извлечение из body_text
+        body_text = event_details.get('body_text', '')
+        if 'Стоимость' in body_text:
+            matches = re.findall(
+                r'!Время:([^\n]+)\nСтоимость:([^\n]+)',
+                body_text
+            )
+            if matches:
+                backup_schedule = [
+                    f"{t.strip()} (Стоимость: {p.strip()})"
+                    for t, p in matches
+                ]
+                timetable = backup_schedule
+
+        # Форматирование окончательного результата
+        if not timetable:
+            if 'Улица' in body_text:
+                return "Уточняйте расписание"
+            return "Уточняйте расписание"
+
+        return '\n'.join(timetable)
+
 
 
 class KudaGoGateway(BaseGateway):
