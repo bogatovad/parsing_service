@@ -10,4 +10,7 @@ app = Celery("parsing_service")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-app.autodiscover_tasks()
+# Явно указываем пакеты для поиска задач
+app.autodiscover_tasks(["frameworks_and_drivers.django.parsing"])
+
+# Импортируем задачи
