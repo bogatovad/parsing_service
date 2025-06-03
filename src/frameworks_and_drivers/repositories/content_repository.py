@@ -113,9 +113,16 @@ class DjangoContentRepository(ContentRepositoryProtocol):
                 if not tag_name:  # Пропускаем пустые теги
                     continue
                 try:
-                    tag_for_save, created = Tags.objects.get_or_create(
-                        name=tag_name, defaults={"description": f"Tag for {name}"}
-                    )
+                    # Ищем существующий тег (без учета регистра)
+                    tag_name = tag_name.strip()
+                    tag_for_save = Tags.objects.filter(name__iexact=tag_name).first()
+
+                    if not tag_for_save:
+                        # Создаем новый тег, если не нашли существующий
+                        tag_for_save = Tags.objects.create(
+                            name=tag_name, description=f"Tag for {name}"
+                        )
+
                     content_for_save.tags.add(tag_for_save)
                 except Exception as tag_error:
                     logging.warning(
