@@ -2,11 +2,7 @@ import os
 import io
 import uuid
 import logging
-from typing import Optional
 from django.core.files import File
-from django.db.models import Q
-from datetime import datetime
-from difflib import SequenceMatcher
 
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE", "frameworks_and_drivers.django.parsing.parsing.settings"
@@ -163,75 +159,6 @@ class DjangoContentRepository(ContentRepositoryProtocol):
 
     def get_all_unique_ids(self) -> list[str]:
         return list(Content.objects.values_list("unique_id", flat=True))
-
-    def find_duplicate(
-        self,
-        name: str,
-        date_start: str,
-        time: str,
-        location: str,
-        similarity_threshold: float = 0.8,
-    ) -> Optional[ContentPydanticSchema]:
-        """
-        Проверяет наличие дубликата события в базе данных.
-
-        :param name: Название события
-        :param date_start: Дата начала события
-        :param time: Время события
-        :param location: Место проведения
-        :param similarity_threshold: Порог схожести для нечеткого сравнения (0.0 - 1.0)
-        :return: Найденный дубликат или None
-        """
-        try:
-            # Преобразуем строку даты в объект datetime
-            date_obj = datetime.strptime(date_start, "%Y-%m-%d").date()
-
-            # Ищем события на ту же дату
-            potential_duplicates = Content.objects.filter(Q(date_start=date_obj))
-
-            # Проверяем каждое потенциальное совпадение
-            for content in potential_duplicates:
-                # Проверяем схожесть названий
-                name_similarity = SequenceMatcher(
-                    None, name.lower(), content.name.lower()
-                ).ratio()
-
-                # Если названия достаточно похожи
-                if name_similarity >= similarity_threshold:
-                    # Проверяем время и место
-                    time_match = not time or not content.time or time == content.time
-                    location_match = (
-                        not location
-                        or not content.location
-                        or location.lower() in content.location.lower()
-                        or content.location.lower() in location.lower()
-                    )
-
-                    if time_match and location_match:
-                        # Конвертируем в схему и возвращаем
-                        return ContentPydanticSchema(
-                            name=content.name,
-                            description=content.description,
-                            contact=content.contact,
-                            date_start=content.date_start,
-                            date_end=content.date_end,
-                            time=content.time,
-                            location=content.location,
-                            cost=content.cost,
-                            city=content.city,
-                            unique_id=content.unique_id,
-                            tags=[tag.name for tag in content.tags.all()],
-                            image=content.image.read() if content.image else b"",
-                            event_type=content.event_type,
-                            publisher_type=content.publisher_type,
-                            publisher_id=content.publisher_id,
-                        )
-
-            return None
-
-        except Exception as e:
-            logging.error(f"Ошибка при поиске дубликатов: {str(e)}")
-            return None
 
     def all_today_contents(self) -> Content:
         """

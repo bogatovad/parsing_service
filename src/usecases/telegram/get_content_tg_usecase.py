@@ -121,31 +121,6 @@ class GetContentTgUseCase:
                     success=False, error="Не удалось создать схему контента"
                 )
 
-            # Проверка на дубликаты через репозиторий
-            try:
-                date_str = (
-                    content.date_start.strftime("%Y-%m-%d")
-                    if content.date_start
-                    else ""
-                )
-                time_str = content.time if isinstance(content.time, str) else ""
-
-                duplicate = self.content_repo.find_duplicate(
-                    name=content.name,
-                    date_start=date_str,
-                    time=time_str,
-                    location=content.location,
-                )
-
-                if duplicate:
-                    return ProcessingResult(
-                        success=False,
-                        error=f"Найден дубликат события: {duplicate.name}",
-                    )
-            except Exception as e:
-                logger.warning(f"Ошибка при проверке дубликатов: {str(e)}")
-                # Продолжаем выполнение даже при ошибке проверки дубликатов
-
             # Сохранение события
             self.content_repo.save_one_content(content)
             logger.info(f"Сохранено новое событие: {content.name}")

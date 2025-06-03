@@ -194,14 +194,8 @@ class TelegramGateway(BaseGateway):
                         "Сообщение ID=%s содержит изображение. Скачиваем...", msg.id
                     )
                     image_bytes = self.get_image_bytes(msg)
-                    # pic_text = self._extract_text_from_image(image_bytes)
                 else:
                     image_bytes = b""
-                    # pic_text = ""
-
-                # if pic_text:
-                #     combined_text += pic_text
-                #     logging.debug("Добавлен текст OCR:\n%s", pic_text)
 
                 events.append(
                     {
