@@ -104,8 +104,15 @@ class DjangoContentRepository(ContentRepositoryProtocol):
 
                             Image.open(buffer).verify()
                             buffer.seek(0)
+                            image_filename = f"autopost_{content.unique_id or 'no_id'}_{uuid.uuid4()}.jpg"
+                            logging.info(
+                                f"Attempting to save image {image_filename} to MinIO for content: {content.name}"
+                            )
                             content_for_save.image.save(
-                                name=f"autopost{uuid.uuid4()}", content=File(buffer)
+                                name=image_filename, content=File(buffer)
+                            )
+                            logging.info(
+                                f"Successfully saved image {image_filename} to MinIO."
                             )
                         except Exception as img_verify_error:
                             logging.error(
