@@ -96,13 +96,26 @@ class DjangoContentRepository(ContentRepositoryProtocol):
             # Сохраняем изображение, если оно есть
             if content.image:
                 try:
-                    buffer = io.BytesIO(content.image)
-                    content_for_save.image.save(
-                        name=f"autopost{uuid.uuid4()}", content=File(buffer)
-                    )
+                    if len(content.image) > 0:  # Проверяем, что изображение не пустое
+                        buffer = io.BytesIO(content.image)
+                        # Проверяем, что это действительно изображение
+                        try:
+                            from PIL import Image
+
+                            Image.open(buffer).verify()
+                            buffer.seek(0)
+                            content_for_save.image.save(
+                                name=f"autopost{uuid.uuid4()}", content=File(buffer)
+                            )
+                        except Exception as img_verify_error:
+                            logging.error(
+                                f"Invalid image data: {str(img_verify_error)}"
+                            )
+                    else:
+                        logging.warning("Empty image data received")
                 except Exception as img_error:
-                    logging.warning(
-                        f"Ошибка при сохранении изображения: {str(img_error)}"
+                    logging.error(
+                        f"Error saving image for {content.name}: {str(img_error)}"
                     )
 
             # Сохраняем основной объект

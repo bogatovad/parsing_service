@@ -12,6 +12,7 @@ from interface_adapters.repositories.base_content_repository import (
 from usecases.places.data import arr
 from django.core.files.base import ContentFile
 import requests
+import logging
 
 
 class GetPlacesUsecase:
@@ -57,11 +58,27 @@ class GetPlacesUsecase:
             image_content = None
             if image_url:
                 try:
-                    response = requests.get(image_url)
+                    response = requests.get(image_url, timeout=10)
                     if response.status_code == 200:
-                        image_content = ContentFile(response.content)
+                        content_type = response.headers.get("content-type", "")
+                        if content_type.startswith("image/"):
+                            image_content = ContentFile(response.content)
+                        else:
+                            logging.error(
+                                f"Invalid content type for image {image_url}: {content_type}"
+                            )
+                    else:
+                        logging.error(
+                            f"Failed to download image {image_url}, status code: {response.status_code}"
+                        )
+                except requests.exceptions.Timeout:
+                    logging.error(f"Timeout while downloading image from {image_url}")
                 except Exception as e:
-                    print(f"Ошибка загрузки изображения для {name}: {e}")
+                    logging.error(
+                        f"Error downloading image for {name} from {image_url}: {e}"
+                    )
+            else:
+                logging.warning(f"No image URL provided for {name}")
 
             # Create Content object
             content = Content.objects.create(
