@@ -46,21 +46,13 @@ class ImageDownloader:
     @staticmethod
     def download(url):
         if not url:
-            logging.warning("Empty image URL provided")
             return b""
         try:
-            response = requests.get(url, timeout=10)  # Добавляем таймаут
+            response = requests.get(url)
             response.raise_for_status()
-            content_type = response.headers.get("content-type", "")
-            if not content_type.startswith("image/"):
-                logging.error(f"Invalid content type for image: {content_type}")
-                return b""
             return response.content
-        except requests.exceptions.Timeout:
-            logging.error(f"Timeout while downloading image from {url}")
-            return b""
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Image download error for {url}: {e}")
+        except Exception as e:
+            logging.error(f"Image download error: {e}")
             return b""
 
 
@@ -145,12 +137,6 @@ class EventParser:
 
     def _get_image_url(self, event):
         images = event.get("images", [])
-        if not images:
-            logging.warning(
-                f"No images found for event: {event.get('title', 'Unknown event')}"
-            )
-            return ""
-        logging.info(f"Found image URL: {images[0].get('image')}")
         return images[0].get("image") if images else ""
 
     def _parse_schedule(self, event_details: dict):
