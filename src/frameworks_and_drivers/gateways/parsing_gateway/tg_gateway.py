@@ -6,11 +6,11 @@ from telethon.sessions import StringSession
 
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 
-import easyocr
-from PIL import Image
-import re
+# import easyocr
+# from PIL import Image
+# import re
 
-logging.basicConfig(level=logging.DEBUG)  # при желании можно level=logging.INFO
+logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("telethon").setLevel(logging.WARNING)
 
 
@@ -59,7 +59,7 @@ class TelegramGateway(BaseGateway):
         self._run_auth()
 
         # EasyOCR для распознавания текста на картинках
-        self.ocr_reader = easyocr.Reader(["ru", "en"], gpu=False)
+        # self.ocr_reader = easyocr.Reader(["ru", "en"], gpu=False)
 
     def _run_auth(self) -> None:
         self.client.connect()
@@ -110,44 +110,44 @@ class TelegramGateway(BaseGateway):
             logging.error(f"Ошибка скачивания медиа: {e}", exc_info=True)
         return image_bytes
 
-    def _extract_text_from_image(self, image_bytes: bytes) -> str:
-        """
-        Извлекает текст с помощью easyocr и возвращает его
-        с префиксом, если распознанный текст не пуст.
-        """
-        if not image_bytes:
-            logging.debug("Пустые байты для OCR, пропускаем.")
-            return ""
-
-        ocr_prefix = (
-            "Далее будет указан текст с изображения прикреплённого к посту, "
-            "если на нём есть какая-то дополнительная информация (адрес, телефон, цена и т.д.), "
-            "добавь это в json. Если информация дублируется по разному, "
-            "то в приоритете данные из текста поста. Текст с картинки:"
-        )
-        try:
-            pil_image = Image.open(BytesIO(image_bytes))
-            result = self.ocr_reader.readtext(pil_image)
-
-            if not result:
-                logging.debug("EasyOCR не распознала текст на изображении.")
-                return ""
-
-            # Склеим все строки OCR в одну строку, убирая повторные пробелы/переносы
-            recognized_text = " ".join(
-                item[1].strip() for item in result if item[1].strip()
-            )
-            recognized_text = re.sub(r"\s+", " ", recognized_text).strip()
-
-            if not recognized_text:
-                logging.debug("OCR вернула пустой текст после очистки.")
-                return ""
-
-            logging.debug("OCR вернула текст:\n%s", recognized_text)
-            return f"\n{ocr_prefix}\n{recognized_text}"
-        except Exception as e:
-            logging.error(f"Ошибка OCR (возможно, не изображение): {e}", exc_info=True)
-            return ""
+    # def _extract_text_from_image(self, image_bytes: bytes) -> str:
+    #     """
+    #     Извлекает текст с помощью easyocr и возвращает его
+    #     с префиксом, если распознанный текст не пуст.
+    #     """
+    #     if not image_bytes:
+    #         logging.debug("Пустые байты для OCR, пропускаем.")
+    #         return ""
+    #
+    #     ocr_prefix = (
+    #         "Далее будет указан текст с изображения прикреплённого к посту, "
+    #         "если на нём есть какая-то дополнительная информация (адрес, телефон, цена и т.д.), "
+    #         "добавь это в json. Если информация дублируется по разному, "
+    #         "то в приоритете данные из текста поста. Текст с картинки:"
+    #     )
+    #     try:
+    #         pil_image = Image.open(BytesIO(image_bytes))
+    #         result = self.ocr_reader.readtext(pil_image)
+    #
+    #         if not result:
+    #             logging.debug("EasyOCR не распознала текст на изображении.")
+    #             return ""
+    #
+    #         # Склеим все строки OCR в одну строку, убирая повторные пробелы/переносы
+    #         recognized_text = " ".join(
+    #             item[1].strip() for item in result if item[1].strip()
+    #         )
+    #         recognized_text = re.sub(r"\s+", " ", recognized_text).strip()
+    #
+    #         if not recognized_text:
+    #             logging.debug("OCR вернула пустой текст после очистки.")
+    #             return ""
+    #
+    #         logging.debug("OCR вернула текст:\n%s", recognized_text)
+    #         return f"\n{ocr_prefix}\n{recognized_text}"
+    #     except Exception as e:
+    #         logging.error(f"Ошибка OCR (возможно, не изображение): {e}", exc_info=True)
+    #         return ""
 
     def get_sources(self):
         return self.channels
@@ -194,14 +194,14 @@ class TelegramGateway(BaseGateway):
                         "Сообщение ID=%s содержит изображение. Скачиваем...", msg.id
                     )
                     image_bytes = self.get_image_bytes(msg)
-                    pic_text = self._extract_text_from_image(image_bytes)
+                    # pic_text = self._extract_text_from_image(image_bytes)
                 else:
                     image_bytes = b""
-                    pic_text = ""
+                    # pic_text = ""
 
-                if pic_text:
-                    combined_text += pic_text
-                    logging.debug("Добавлен текст OCR:\n%s", pic_text)
+                # if pic_text:
+                #     combined_text += pic_text
+                #     logging.debug("Добавлен текст OCR:\n%s", pic_text)
 
                 events.append(
                     {

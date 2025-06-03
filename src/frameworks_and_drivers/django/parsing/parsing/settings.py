@@ -10,12 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-%czbdzi92%w&y(zz17m1gf2q(ecy+s&+9bvxgctf5g3ucq_ymd"
+SECRET_KEY = "django-insecure-4hs#$%^&*()_+=-0987654321"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -118,7 +118,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"  # Устанавливаем московское время
 
 USE_I18N = True
 
@@ -135,16 +135,35 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
 
-CELERY_TIMEZONE = "UTC"
+CELERY_TIMEZONE = "Europe/Moscow"  # Используем московское время для Celery
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+# Настройки для django-celery-beat
+DJANGO_CELERY_BEAT_TZ_AWARE = True
+
+# Расписание задач Celery Beat
+CELERY_BEAT_SCHEDULE = {
+    "run-main-parsers-morning": {
+        "task": "run_main_parsers",
+        "schedule": crontab(hour=9, minute=0),  # Запуск в 9:00
+        "options": {
+            "expires": 3600,  # Задача истекает через час
+        },
+    },
+    "run-main-parsers-evening": {
+        "task": "run_main_parsers",
+        "schedule": crontab(hour=18, minute=0),  # Запуск в 18:00
+        "options": {
+            "expires": 3600,  # Задача истекает через час
+        },
+    },
+}
 
 MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER")
 MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD")
@@ -156,26 +175,42 @@ AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
 AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
 AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT
 
-
-CELERY_BEAT_SCHEDULE = {
-    # "example-task-tg-10-05am": {
-    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_tg_task",
-    #     "schedule": crontab(minute="*/1"),
-    # },
-    # "example-task-kudago-10-10am": {
-    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_kudago_task",
-    #     "schedule": crontab(minute="*/1"),
-    # },
-    # "example-task-timepad-10-10am": {
-    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_timepad_task",
-    #     "schedule": crontab(minute="*/1"),
-    # },
-    # "example-task-places": {
-    #     "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_places_task",
-    #     "schedule": crontab(minute="*/1"),
-    # },
-    "example-task-vk-10-05am": {
-        "task": "frameworks_and_drivers.django.parsing.data_manager.tasks.parsing_data_from_vk_task",
-        "schedule": crontab(minute="*/3"),
+# Logging configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "": {  # Root logger
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "frameworks_and_drivers": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "interface_adapters": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "django.db.backends": {  # Логирование SQL запросов
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }

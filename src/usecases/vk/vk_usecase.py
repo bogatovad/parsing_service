@@ -52,6 +52,14 @@ class GetContentVkUseCase(AbstractUseCase):
                 if unique_id in exists_unique_ids:
                     continue
 
+                # Генерация более уникального идентификатора
+                name = event.get("name", "")
+                date_str = event.get("data_start", "")
+                if date_str and name:
+                    unique_id = f"{unique_id}_{date_str}_{name[:50]}"  # Используем первые 50 символов имени
+                elif name:
+                    unique_id = f"{unique_id}_{name[:50]}"  # Используем первые 50 символов имени
+
                 content = self._create_schema_from_event(event, unique_id)
                 if content:
                     logger.info("Схема создана")
@@ -70,23 +78,39 @@ class GetContentVkUseCase(AbstractUseCase):
             except (ValueError, TypeError):
                 cost = 0
 
-            date_start = event.get("data_start", "")
-            date_end = event.get("data_end", "")
-            if not date_start:
+            # Обработка дат
+            date_start_str = event.get("data_start", "")
+            date_end_str = event.get("data_end", date_start_str)
+
+            if not date_start_str:
                 logging.info("Нет даты начала.")
                 return None
-            current_date = datetime.now()
-            date_end = datetime.strptime(date_end, "%Y-%m-%d")
-            if current_date > date_end:
-                logging.info("Мероприятие завершено.")
+
+            try:
+                date_start = datetime.strptime(date_start_str, "%Y-%m-%d")
+                date_end = datetime.strptime(date_end_str, "%Y-%m-%d")
+                current_date = datetime.now()
+
+                if current_date > date_end:
+                    logging.info("Мероприятие завершено.")
+                    return None
+            except ValueError as e:
+                logging.error(f"Ошибка парсинга даты: {e}")
                 return None
+
+            # Обработка контактов
+            contact = event.get("contact", [{}])
+            if isinstance(contact, dict):
+                contact = [contact]
+            elif not isinstance(contact, list):
+                contact = [{}]
 
             return ContentPydanticSchema(
                 name=event.get("name", "Default Name FROM VK"),
                 description=event.get("description", "No description available"),
                 tags=event.get("category", []),
                 image=event.get("image", b""),
-                contact=event.get("contact", [{}]),
+                contact=contact,
                 date_start=date_start,
                 date_end=date_end,
                 time=event.get("time", "00:00"),

@@ -2,7 +2,11 @@ import os
 import io
 import uuid
 import logging
+from typing import Optional
 from django.core.files import File
+from django.db.models import Q
+from datetime import datetime
+from difflib import SequenceMatcher
 
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE", "frameworks_and_drivers.django.parsing.parsing.settings"
@@ -16,12 +20,12 @@ from interface_adapters.repositories.base_content_repository import (
 logging.basicConfig(level=logging.INFO)
 
 
-class ContentRepositoryProtocol(ContentRepositoryProtocol):
+class DjangoContentRepository(ContentRepositoryProtocol):
     def save_content(self, contents: list[ContentPydanticSchema]) -> None:
         """
         Метод для сохранения контента.
 
-        :param contents:
+        :param contents: Список контента для сохранения
         """
         for content in contents:
             try:
@@ -36,44 +40,93 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
                     cost=content.cost,
                     city=content.city,
                     unique_id=content.unique_id,
+                    event_type=content.event_type,
+                    publisher_type=content.publisher_type,
+                    publisher_id=content.publisher_id,
                 )
-                buffer = io.BytesIO(content.image)
-                content_for_save.image.save(
-                    name=f"autopost{uuid.uuid4()}", content=File(buffer)
-                )
+                if content.image:
+                    buffer = io.BytesIO(content.image)
+                    content_for_save.image.save(
+                        name=f"autopost{uuid.uuid4()}", content=File(buffer)
+                    )
                 content_for_save.save()
                 for tag in content.tags:
                     tag_for_save = Tags.objects.filter(name=tag).first()
                     if tag_for_save:
                         content_for_save.tags.add(tag_for_save)
-            except:  # noqa: E722
-                logging.info("Ошибка при сохранении контента")
+            except Exception as e:
+                logging.error(f"Ошибка при сохранении контента: {str(e)}")
 
     def save_one_content(self, content: ContentPydanticSchema) -> None:
         try:
+            # Проверяем и очищаем данные перед сохранением
+            name = content.name.strip() if content.name else "Без названия"
+            description = (
+                content.description.strip()
+                if content.description
+                else "Описание отсутствует"
+            )
+            location = (
+                content.location.strip()
+                if content.location
+                else "Место проведения уточняется"
+            )
+            time = content.time.strip() if content.time else None
+            city = (
+                content.city.strip() if content.city else "nn"
+            )  # По умолчанию Нижний Новгород
+
+            # Создаем объект контента
             content_for_save = Content(
-                name=content.name,
-                description=content.description,
-                contact=content.contact,
+                name=name,
+                description=description,
+                contact=content.contact or [],
                 date_start=content.date_start,
                 date_end=content.date_end,
-                time=content.time,
-                location=content.location,
-                cost=content.cost,
-                city=content.city,
+                time=time,
+                location=location,
+                cost=content.cost or 0,
+                city=city,
                 unique_id=content.unique_id,
+                event_type=content.event_type or "offline",
+                publisher_type=content.publisher_type or "user",
+                publisher_id=content.publisher_id or 1_000_000,
             )
-            buffer = io.BytesIO(content.image)
-            content_for_save.image.save(
-                name=f"autopost{uuid.uuid4()}", content=File(buffer)
-            )
+
+            # Сохраняем изображение, если оно есть
+            if content.image:
+                try:
+                    buffer = io.BytesIO(content.image)
+                    content_for_save.image.save(
+                        name=f"autopost{uuid.uuid4()}", content=File(buffer)
+                    )
+                except Exception as img_error:
+                    logging.warning(
+                        f"Ошибка при сохранении изображения: {str(img_error)}"
+                    )
+
+            # Сохраняем основной объект
             content_for_save.save()
-            for tag in content.tags:
-                tag_for_save = Tags.objects.filter(name=tag).first()
-                if tag_for_save:
+
+            # Обрабатываем теги
+            for tag_name in content.tags:
+                if not tag_name:  # Пропускаем пустые теги
+                    continue
+                try:
+                    tag_for_save, created = Tags.objects.get_or_create(
+                        name=tag_name, defaults={"description": f"Tag for {name}"}
+                    )
                     content_for_save.tags.add(tag_for_save)
-        except Exception as ex:  # noqa: E722
-            logging.info(f"Ошибка при сохранении контента {ex}")
+                except Exception as tag_error:
+                    logging.warning(
+                        f"Ошибка при сохранении тега {tag_name}: {str(tag_error)}"
+                    )
+
+            logging.info(f"Успешно сохранено событие: {name}")
+
+        except Exception as ex:
+            logging.error(f"Ошибка при сохранении контента: {str(ex)}")
+            raise  # Пробрасываем исключение дальше для отладки
 
     def get_all_tags(self) -> list[str]:
         return list(Tags.objects.values_list("name", flat=True))
@@ -83,6 +136,75 @@ class ContentRepositoryProtocol(ContentRepositoryProtocol):
 
     def get_all_unique_ids(self) -> list[str]:
         return list(Content.objects.values_list("unique_id", flat=True))
+
+    def find_duplicate(
+        self,
+        name: str,
+        date_start: str,
+        time: str,
+        location: str,
+        similarity_threshold: float = 0.8,
+    ) -> Optional[ContentPydanticSchema]:
+        """
+        Проверяет наличие дубликата события в базе данных.
+
+        :param name: Название события
+        :param date_start: Дата начала события
+        :param time: Время события
+        :param location: Место проведения
+        :param similarity_threshold: Порог схожести для нечеткого сравнения (0.0 - 1.0)
+        :return: Найденный дубликат или None
+        """
+        try:
+            # Преобразуем строку даты в объект datetime
+            date_obj = datetime.strptime(date_start, "%Y-%m-%d").date()
+
+            # Ищем события на ту же дату
+            potential_duplicates = Content.objects.filter(Q(date_start=date_obj))
+
+            # Проверяем каждое потенциальное совпадение
+            for content in potential_duplicates:
+                # Проверяем схожесть названий
+                name_similarity = SequenceMatcher(
+                    None, name.lower(), content.name.lower()
+                ).ratio()
+
+                # Если названия достаточно похожи
+                if name_similarity >= similarity_threshold:
+                    # Проверяем время и место
+                    time_match = not time or not content.time or time == content.time
+                    location_match = (
+                        not location
+                        or not content.location
+                        or location.lower() in content.location.lower()
+                        or content.location.lower() in location.lower()
+                    )
+
+                    if time_match and location_match:
+                        # Конвертируем в схему и возвращаем
+                        return ContentPydanticSchema(
+                            name=content.name,
+                            description=content.description,
+                            contact=content.contact,
+                            date_start=content.date_start,
+                            date_end=content.date_end,
+                            time=content.time,
+                            location=content.location,
+                            cost=content.cost,
+                            city=content.city,
+                            unique_id=content.unique_id,
+                            tags=[tag.name for tag in content.tags.all()],
+                            image=content.image.read() if content.image else b"",
+                            event_type=content.event_type,
+                            publisher_type=content.publisher_type,
+                            publisher_id=content.publisher_id,
+                        )
+
+            return None
+
+        except Exception as e:
+            logging.error(f"Ошибка при поиске дубликатов: {str(e)}")
+            return None
 
     def all_today_contents(self) -> Content:
         """

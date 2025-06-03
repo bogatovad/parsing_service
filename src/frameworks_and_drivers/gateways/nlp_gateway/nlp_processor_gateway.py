@@ -4,12 +4,14 @@ import requests
 import yaml
 import logging
 import os
+from pathlib import Path
+import time
 
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("nlp_processor")
 
 
 class NLPProcessor(NLPProcessorBase):
@@ -30,19 +32,25 @@ class NLPProcessor(NLPProcessorBase):
         self.attempt_interval = 60
         self.max_retries = 3
 
-        with open(prompt_file, "r", encoding="utf-8") as f:
+        # Определяем путь к файлу относительно корня проекта
+        project_root = (
+            Path(__file__).resolve().parents[4]
+        )  # 4 уровня вверх до корня проекта
+        prompt_file_path = project_root / prompt_file
+
+        with open(prompt_file_path, "r", encoding="utf-8") as f:
             self.prompt_config = yaml.safe_load(f)
 
-        logging.debug(
-            "NLPProcessor инициализирован. Промпты загружены из: %s", prompt_file
+        logger.debug(
+            "NLPProcessor инициализирован. Промпты загружены из: %s", prompt_file_path
         )
 
     def _parse_response(self, response_text: str) -> list:
-        logging.debug("Парсим ответ нейросети: %s", response_text)
+        logger.debug("Парсим ответ нейросети: %s", response_text)
         if not response_text:
             return []
         if response_text.strip() == "[НЕ АФИША]":
-            logging.debug("Ответ: [НЕ АФИША]. Вернём пустой список.")
+            logger.debug("Ответ: [НЕ АФИША]. Вернём пустой список.")
             return []
         try:
             parsed = json.loads(response_text)
@@ -51,15 +59,15 @@ class NLPProcessor(NLPProcessorBase):
             elif isinstance(parsed, dict):
                 return [parsed]
             else:
-                logging.debug("Ответ не list и не dict.")
+                logger.debug("Ответ не list и не dict.")
                 return []
         except Exception as e:
-            logging.error(f"Ошибка парсинга ответа: {e}")
+            logger.error(f"Ошибка парсинга ответа: {e}")
             return []
 
     def _send_request(self, url, api_key, model, prompt):
-        logging.debug("Отправляем запрос к API: %s, модель=%s", url, model)
-        logging.debug("Промпт:\n%s", prompt)
+        logger.debug("Отправляем запрос к API: %s, модель=%s", url, model)
+        logger.debug("Длина промпта: %d символов", len(prompt))
 
         payload = {
             "model": model,
@@ -71,20 +79,40 @@ class NLPProcessor(NLPProcessorBase):
             "Content-Type": "application/json",
         }
 
-        try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
-            choices = data.get("choices", [])
-            if not choices:
-                logging.warning("API вернул пустые choices.")
-                return ""
-            content = choices[0]["message"]["content"]
-            logging.debug("Ответ API:\n%s", content)
-            return content
-        except Exception as e:
-            logging.error(f"Ошибка при запросе к API: {e}")
-            return ""
+        max_retries = 3
+        timeout = 30  # увеличиваем таймаут до 30 секунд
+        retry_delay = 5  # задержка между попытками в секундах
+
+        for attempt in range(max_retries):
+            try:
+                resp = requests.post(
+                    url, headers=headers, json=payload, timeout=timeout
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                choices = data.get("choices", [])
+                if not choices:
+                    logger.warning("API вернул пустые choices.")
+                    return ""
+                content = choices[0]["message"]["content"]
+                logger.debug("Ответ API получен успешно")
+                return content
+            except requests.Timeout:
+                logger.warning(
+                    f"Таймаут при запросе к API (попытка {attempt + 1}/{max_retries})"
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+            except requests.RequestException as e:
+                logger.error(f"Ошибка при запросе к API: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                break
+
+        logger.error("Все попытки запроса к API завершились неудачно")
+        return ""
 
     def _call_api(self, prompt: str, service: str = "thebai") -> str:
         """
@@ -130,7 +158,7 @@ class NLPProcessor(NLPProcessorBase):
 
         raw_response = self._call_api(prompt, service="thebai")
         parsed_list = self._parse_response(raw_response)
-        logging.debug("Результат парсинга: %s объектов", len(parsed_list))
+        logger.debug("Результат парсинга: %s объектов", len(parsed_list))
         return parsed_list
 
     def process_post(self, post: dict) -> list:
@@ -144,12 +172,12 @@ class NLPProcessor(NLPProcessorBase):
         image_data = post_copy.pop("image", None)
         text = post_copy.get("text", "")
         if not text:
-            logging.info("Пост без текста – пропускаем.")
+            logger.info("Пост без текста – пропускаем.")
             return []
 
-        logging.debug("Передаём в нейронку текст (длина=%s):\n%s", len(text), text)
+        logger.debug("Передаём в нейронку текст (длина=%s):\n%s", len(text), text)
         events = self.process(text)
-        logging.debug("Нейронка вернула %s объектов", len(events))
+        logger.debug("Нейронка вернула %s объектов", len(events))
 
         for evt in events:
             # Если нейронка не вложила 'image', подставляем наше
@@ -165,15 +193,48 @@ class NLPProcessor(NLPProcessorBase):
     ) -> str:
         """
         Определяет категорию мероприятия.
-        Использует шаблон category_prompt из YAML.
-        Возвращает строку с категорией, полученную из API.
+        Сначала пытается использовать API, если не получается - использует локальные правила.
         """
-        category_prompt_template = self.prompt_config.get(
-            service, "Определи категорию: {text}"
-        )
-        prompt = category_prompt_template.format(text=event_text)
-        result = self._call_api(prompt, service="thebai")
-        return result
+        try:
+            # Пробуем через API
+            category_prompt_template = self.prompt_config.get(
+                service, "Определи категорию: {text}"
+            )
+            prompt = category_prompt_template.format(text=event_text)
+            result = self._call_api(prompt, service="thebai")
+            if result and result.strip():
+                return result.strip()
+        except Exception as e:
+            logger.warning(f"Ошибка при определении категории через API: {str(e)}")
+
+        # Если API не сработал, используем локальные правила
+        text = event_text.lower()
+
+        # Правила определения категории
+        if any(word in text for word in ["концерт", "музыка", "опера", "джаз", "рок"]):
+            return "Музыка"
+        elif any(word in text for word in ["театр", "спектакль", "драма", "комедия"]):
+            return "Театр"
+        elif any(word in text for word in ["выставка", "галерея", "искусство"]):
+            return "Искусство"
+        elif any(word in text for word in ["лекция", "семинар", "мастер-класс"]):
+            return "Образование"
+        elif any(word in text for word in ["кино", "фильм", "премьера"]):
+            return "Кино"
+        elif any(word in text for word in ["дети", "ребенок", "семья"]):
+            return "Семья"
+        elif any(word in text for word in ["экскурсия", "прогулка", "тур"]):
+            return "Экскурсия"
+        elif any(word in text for word in ["it", "программирование", "разработка"]):
+            return "IT-Ивенты"
+        elif any(word in text for word in ["стендап", "юмор", "комик"]):
+            return "StandUp"
+        elif any(word in text for word in ["еда", "кулинария", "гастрономия"]):
+            return "Еда"
+        elif any(word in text for word in ["спорт", "фитнес", "тренировка"]):
+            return "Спорт"
+
+        return "Разное"
 
     def generate_link_title(self, event_text: str) -> str:
         """

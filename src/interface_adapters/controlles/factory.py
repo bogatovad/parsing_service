@@ -8,20 +8,16 @@ from frameworks_and_drivers.gateways.parsing_gateway.tg_gateway import TelegramG
 from frameworks_and_drivers.gateways.parsing_gateway.timepad_gateway import (
     TimepadGateway,
 )
-from frameworks_and_drivers.gateways.parsing_gateway.yandex_afisha_gateway import (
-    YandexAfishaGateway,
-)
 from frameworks_and_drivers.gateways.parsing_gateway.vk_gateway import (
     ParsingVK,
 )
 from usecases.kuda_go.kuda_go_usecase import GetContentKudaGoUseCase
 from usecases.telegram.get_content_tg_usecase import GetContentTgUseCase
 from usecases.timepad.timepad_usecase import GetContentTimepadUseCase
-from usecases.yandex_afisha.yandex_afisha_usecase import GetContentYandexAfishaUseCase
 from usecases.vk.vk_usecase import GetContentVkUseCase
 from usecases.places.get_places_usecase import GetPlacesUsecase
 from frameworks_and_drivers.repositories.content_repository import (
-    ContentRepositoryProtocol,
+    DjangoContentRepository,
 )
 from frameworks_and_drivers.repositories.file_repository import FileRepositoryProtocol
 
@@ -32,7 +28,7 @@ class UseCaseFactory:
         return GetContentTgUseCase(
             gateway=TelegramGateway(),
             nlp_processor=NLPProcessor(),
-            content_repo=ContentRepositoryProtocol(),
+            content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
@@ -41,16 +37,7 @@ class UseCaseFactory:
         return GetContentKudaGoUseCase(
             gateway=KudaGoGateway(),
             nlp_processor=NLPProcessor(),
-            content_repo=ContentRepositoryProtocol(),
-            file_repo=FileRepositoryProtocol(),
-        )
-
-    @staticmethod
-    def get_yandex_afisha_content_usecase() -> GetContentYandexAfishaUseCase:
-        return GetContentYandexAfishaUseCase(
-            gateway=YandexAfishaGateway(),
-            nlp_processor=NLPProcessor(),
-            content_repo=ContentRepositoryProtocol(),
+            content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
@@ -59,7 +46,7 @@ class UseCaseFactory:
         return GetContentTimepadUseCase(
             gateway=TimepadGateway(),
             nlp_processor=NLPProcessor(),
-            content_repo=ContentRepositoryProtocol(),
+            content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
@@ -68,7 +55,7 @@ class UseCaseFactory:
         return GetContentVkUseCase(
             gateway=ParsingVK(),
             nlp_processor=NLPProcessor(),
-            content_repo=ContentRepositoryProtocol(),
+            content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
@@ -77,6 +64,6 @@ class UseCaseFactory:
         return GetPlacesUsecase(
             gateway=ParsingVK(),
             nlp_processor=NLPProcessor(),
-            content_repo=ContentRepositoryProtocol(),
+            content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
