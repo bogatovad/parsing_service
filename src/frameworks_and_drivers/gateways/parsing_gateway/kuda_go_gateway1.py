@@ -8,6 +8,7 @@ from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGa
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
+logger = logging.getLogger(__name__)
 
 
 class KudaGoAPIClient:
@@ -85,9 +86,6 @@ class EventParser:
                     "phone": "-",
                 }
             )
-
-        # if details.get("id") == 217464:
-        #    input(details)
 
         result = {
             "id": details.get("id", "-"),

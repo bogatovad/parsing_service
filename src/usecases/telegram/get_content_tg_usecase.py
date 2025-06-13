@@ -116,15 +116,14 @@ class GetContentTgUseCase:
         """Обработка одного события"""
         try:
             content = self._create_schema(event, raw, city)
+
             if not content:
                 return ProcessingResult(
                     success=False, error="Не удалось создать схему контента"
                 )
 
-            # Сохранение события
             self.content_repo.save_one_content(content)
             logger.info(f"Сохранено новое событие: {content.name}")
-
             return ProcessingResult(success=True, content=content)
 
         except Exception as e:
@@ -137,45 +136,35 @@ class GetContentTgUseCase:
     ) -> Optional[ContentPydanticSchema]:
         """Создание схемы контента из данных события"""
         try:
-            # Обязательные поля
-            unique_id = f"{raw.get('event_id', '')}{raw.get('channel', '')}"
+            event_id = raw.get("event_id", "")
+            channel = raw.get("channel", "")
+            unique_id = f"{event_id}{channel}"
             name = event.get("name")
+
             if not name:
                 logger.warning("Событие без названия, пропускаем")
                 return None
 
-            # Генерация более уникального идентификатора
-            date_str = event.get("data_start", "")
-            if date_str:
-                unique_id = f"{unique_id}_{date_str}_{name[:50]}"  # Используем первые 50 символов имени
-            else:
-                unique_id = (
-                    f"{unique_id}_{name[:50]}"  # Используем первые 50 символов имени
-                )
-
-            # Опциональные поля с значениями по умолчанию
             description = event.get("description", "Описание отсутствует")
             tags = event.get("category", []) or event.get("tags", [])
             image = event.get("image", b"")
             contact = event.get("contact", {})
+
             if isinstance(contact, dict):
                 contact = [contact]
             elif not isinstance(contact, list):
                 contact = [{}]
 
-            # Обработка дат
             date_start = self._maybe_parse_date(event.get("data_start"))
             date_end = self._maybe_parse_date(event.get("data_end", date_start))
 
-            # Валидация дат
             if date_end < date_start:
                 date_end = date_start
 
             time_ = event.get("time", "00:00")
             location = event.get("location", "Место не указано")
-
-            # Обработка стоимости
             cost = event.get("cost", 0)
+
             try:
                 cost = (
                     int(cost)

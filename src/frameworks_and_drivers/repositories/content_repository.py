@@ -55,7 +55,6 @@ class DjangoContentRepository(ContentRepositoryProtocol):
 
     def save_one_content(self, content: ContentPydanticSchema) -> None:
         try:
-            # Проверяем и очищаем данные перед сохранением
             name = content.name.strip() if content.name else "Без названия"
             description = (
                 content.description.strip()
@@ -68,9 +67,7 @@ class DjangoContentRepository(ContentRepositoryProtocol):
                 else "Место проведения уточняется"
             )
             time = content.time.strip() if content.time else None
-            city = (
-                content.city.strip() if content.city else "nn"
-            )  # По умолчанию Нижний Новгород
+            city = content.city.strip() if content.city else "nn"
 
             # Создаем объект контента
             content_for_save = Content(
@@ -92,9 +89,9 @@ class DjangoContentRepository(ContentRepositoryProtocol):
             # Сохраняем изображение, если оно есть
             if content.image:
                 try:
-                    if len(content.image) > 0:  # Проверяем, что изображение не пустое
+                    if len(content.image) > 0:
                         buffer = io.BytesIO(content.image)
-                        # Проверяем, что это действительно изображение
+
                         try:
                             from PIL import Image
 
@@ -126,15 +123,13 @@ class DjangoContentRepository(ContentRepositoryProtocol):
 
             # Обрабатываем теги
             for tag_name in content.tags:
-                if not tag_name:  # Пропускаем пустые теги
+                if not tag_name:
                     continue
                 try:
-                    # Ищем существующий тег (без учета регистра)
                     tag_name = tag_name.strip()
                     tag_for_save = Tags.objects.filter(name__iexact=tag_name).first()
 
                     if not tag_for_save:
-                        # Создаем новый тег, если не нашли существующий
                         tag_for_save = Tags.objects.create(
                             name=tag_name, description=f"Tag for {name}"
                         )
@@ -149,7 +144,7 @@ class DjangoContentRepository(ContentRepositoryProtocol):
 
         except Exception as ex:
             logging.error(f"Ошибка при сохранении контента: {str(ex)}")
-            raise  # Пробрасываем исключение дальше для отладки
+            raise
 
     def get_all_tags(self) -> list[str]:
         return list(Tags.objects.values_list("name", flat=True))
