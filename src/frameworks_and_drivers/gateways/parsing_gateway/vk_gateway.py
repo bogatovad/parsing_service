@@ -39,7 +39,7 @@ class ParsingVK(BaseGateway):
         self.posts: List[VKPost] = []
         self.ACCESS_TOKEN = os.getenv(
             "VK_ACCESS_TOKEN",
-            "e55cb58be55cb58be55cb58b7be67746d4ee55ce55cb58b828c1488691a1e2af624bda5",
+            "8d87a7478d87a7478d87a7478c8eb4a7b088d878d87a747e5ba6e8288b149e827b28dce",
         )
         if not self.ACCESS_TOKEN:
             raise ValueError("VK_ACCESS_TOKEN environment variable is not set")
