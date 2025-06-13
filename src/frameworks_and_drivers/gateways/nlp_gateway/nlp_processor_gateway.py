@@ -105,6 +105,7 @@ class NLPProcessor(NLPProcessorBase):
                     time.sleep(retry_delay)
                     continue
             except requests.RequestException as e:
+                logger.error(f"Ответ от модели {resp.json()}")
                 logger.error(f"Ошибка при запросе к API: {e}")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
