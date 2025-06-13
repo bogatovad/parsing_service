@@ -148,6 +148,7 @@ class TelegramGateway(BaseGateway):
                     image_bytes = self.get_image_bytes(msg)
                 else:
                     image_bytes = b""
+                    continue
 
                 events.append(
                     {

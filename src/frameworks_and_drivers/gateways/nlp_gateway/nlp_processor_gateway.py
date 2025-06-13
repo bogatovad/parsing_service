@@ -47,13 +47,17 @@ class NLPProcessor(NLPProcessorBase):
 
     def _parse_response(self, response_text: str) -> list:
         logger.debug("Парсим ответ нейросети: %s", response_text)
+
         if not response_text:
             return []
+
         if response_text.strip() == "[НЕ АФИША]":
             logger.debug("Ответ: [НЕ АФИША]. Вернём пустой список.")
             return []
+
         try:
             parsed = json.loads(response_text)
+
             if isinstance(parsed, list):
                 return parsed
             elif isinstance(parsed, dict):
@@ -107,9 +111,11 @@ class NLPProcessor(NLPProcessorBase):
             except requests.RequestException as e:
                 logger.error(f"Ответ от модели {resp.json()}")
                 logger.error(f"Ошибка при запросе к API: {e}")
+
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
+
                 break
 
         logger.error("Все попытки запроса к API завершились неудачно")
@@ -150,13 +156,11 @@ class NLPProcessor(NLPProcessorBase):
             "Воскресенье",
         ]
         current_day = weekday_map[datetime.now().weekday()]
-
         prompt = (
             main_prompt.replace("{text}", text)
             .replace("{current_date}", current_date)
             .replace("{current_day}", current_day)
         )
-
         raw_response = self._call_api(prompt, service="thebai")
         parsed_list = self._parse_response(raw_response)
         logger.debug("Результат парсинга: %s объектов", len(parsed_list))
