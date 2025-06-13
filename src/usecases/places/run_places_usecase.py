@@ -43,7 +43,7 @@ class GetPlacesUsecase:
             description = place["description"]
             location = place["address"]
             contact = [{"phone": place.get("phone", "-")}]
-            city = "msk"
+            city = "nn"
             category_name = self.nlp_processor.determine_category(
                 description + name, "category_prompt_place"
             )
