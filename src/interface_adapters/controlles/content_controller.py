@@ -82,7 +82,7 @@ class PlacesController:
         """Get content from Places sources"""
         logger.info("Starting Places content parsing")
         try:
-            self.usecase_factory.get_places_content_usecase().execute()
+            self.usecase_factory.get_place_content_usecase().execute()
             logger.info("Successfully finished Places content parsing")
             return True
         except Exception as e:

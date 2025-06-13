@@ -84,7 +84,31 @@ class GetContentTgUseCase:
 
             logger.info(f"Получено {len(raw_contents)} сообщений из {source}")
 
+            # Получаем список существующих unique_id для проверки дубликатов
+            existing_unique_ids = self.content_repo.get_all_unique_ids()
+            logger.info(f"В базе уже есть {len(existing_unique_ids)} событий")
+
+            # Фильтруем сырые данные - убираем дубликаты ДО дорогой NLP обработки
+            filtered_raw_contents = []
             for raw in raw_contents:
+                event_id = raw.get("event_id", "")
+                channel = raw.get("channel", "")
+                unique_id = f"{event_id}{channel}"
+
+                if unique_id not in existing_unique_ids:
+                    filtered_raw_contents.append(raw)
+                    existing_unique_ids.append(
+                        unique_id
+                    )  # Добавляем, чтобы избежать дубликатов в рамках одного запуска
+                else:
+                    logger.debug(f"Пропускаем дубликат с unique_id: {unique_id}")
+
+            logger.info(
+                f"После фильтрации дубликатов осталось {len(filtered_raw_contents)} сообщений для обработки"
+            )
+
+            # Теперь обрабатываем только уникальные сообщения
+            for raw in filtered_raw_contents:
                 try:
                     processed_events = self.nlp_processor.process_post(raw)
 

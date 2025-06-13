@@ -34,23 +34,32 @@ class GetContentTimepadUseCase(AbstractUseCase):
         logging.info("Fetching content from Timepad")
         raw_content: list[dict] = self.gateway.fetch_content()
         unique_ids = self.content_repo.get_all_unique_ids()
-        unique_names = []
 
+        # Фильтруем сырые данные - убираем дубликаты ДО дорогой обработки
+        filtered_raw_content = []
         for content in raw_content:
+            if not content:
+                continue
+
+            unique_id = str(content.get("id")) + "_timepad"
+
+            if unique_id not in unique_ids:
+                filtered_raw_content.append(content)
+                unique_ids.append(
+                    unique_id
+                )  # Добавляем, чтобы избежать дубликатов в рамках одного запуска
+            else:
+                logging.debug(f"Пропускаем дубликат Timepad с unique_id: {unique_id}")
+
+        logging.info(
+            f"После фильтрации дубликатов осталось {len(filtered_raw_content)} событий для обработки"
+        )
+
+        # Теперь обрабатываем только уникальные события
+        for content in filtered_raw_content:
             try:
-                if not content:
-                    continue
-
-                if content.get("name") in unique_names:
-                    continue
-                else:
-                    unique_names.append(content.get("name"))
-
                 logging.info(f"Processing content from Timepad {content}")
-                unique_id = str(content.get("id")) + "timepad"
-
-                if unique_id in unique_ids:
-                    continue
+                unique_id = str(content.get("id")) + "_timepad"
 
                 try:
                     logging.info(f"{content=}")
@@ -95,11 +104,11 @@ class GetContentTimepadUseCase(AbstractUseCase):
                 )
                 city = content.get("location").get("city")
                 name = content.get("name")
-                clean_name = html.unescape(name).replace("�", "")
+                clean_name = html.unescape(name).replace("", "")
                 description = content.get("description_short")
-                clean_description = html.unescape(description).replace("�", "")
+                clean_description = html.unescape(description).replace("", "")
                 location = content.get("location").get("address")
-                clean_location = html.unescape(location).replace("�", "")
+                clean_location = html.unescape(location).replace("", "")
                 clean_location = clean_location if clean_location else ""
                 schema = ContentPydanticSchema(
                     name=clean_name,

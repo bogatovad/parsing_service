@@ -6,6 +6,7 @@ from datetime import datetime
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
 )
+import re
 
 
 logger = logging.getLogger("logger_vk_usecase")
@@ -43,22 +44,52 @@ class GetContentVkUseCase(AbstractUseCase):
 
         exists_unique_ids = self.content_repo.get_all_unique_ids()
 
+        # Фильтруем сырые данные - убираем дубликаты ДО дорогой NLP обработки
+        filtered_raw_contents = []
         for raw in raw_contents:
+            # Генерируем unique_id на основе сырых данных
+            original_id = raw.get("id", "")
+            text = raw.get("text", "")
+
+            # Создаем базовый unique_id
+            if original_id:
+                unique_id = f"vk_{original_id}"
+            else:
+                # Если нет ID, создаем на основе первых слов текста
+                text_part = text[:50] if text else "no_text"
+                unique_id = f"vk_{text_part}"
+
+            # Очищаем от проблемных символов
+            unique_id = re.sub(r"[^\w\-_]", "_", unique_id)
+
+            if unique_id not in exists_unique_ids:
+                filtered_raw_contents.append(raw)
+                exists_unique_ids.append(
+                    unique_id
+                )  # Добавляем, чтобы избежать дубликатов в рамках одного запуска
+            else:
+                logger.debug(f"Пропускаем дубликат VK с unique_id: {unique_id}")
+
+        logger.info(
+            f"После фильтрации дубликатов осталось {len(filtered_raw_contents)} постов для NLP обработки"
+        )
+
+        # Теперь обрабатываем только уникальные посты
+        for raw in filtered_raw_contents:
             processed_result = self.nlp_processor.process_post(raw)
             if not processed_result:
                 continue
             for event in processed_result:
-                unique_id = event.get("id", "")
-                if unique_id in exists_unique_ids:
-                    continue
+                # Генерируем тот же unique_id, что и при фильтрации
+                original_id = raw.get("id", "")
+                if original_id:
+                    unique_id = f"vk_{original_id}"
+                else:
+                    text = raw.get("text", "")
+                    text_part = text[:50] if text else "no_text"
+                    unique_id = f"vk_{text_part}"
 
-                # Генерация более уникального идентификатора
-                name = event.get("name", "")
-                date_str = event.get("data_start", "")
-                if date_str and name:
-                    unique_id = f"{unique_id}_{date_str}_{name[:50]}"  # Используем первые 50 символов имени
-                elif name:
-                    unique_id = f"{unique_id}_{name[:50]}"  # Используем первые 50 символов имени
+                unique_id = re.sub(r"[^\w\-_]", "_", unique_id)
 
                 content = self._create_schema_from_event(event, unique_id)
                 if content:

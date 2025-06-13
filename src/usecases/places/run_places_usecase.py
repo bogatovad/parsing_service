@@ -49,8 +49,24 @@ class GetPlacesUsecase:
             )
 
             # Create or get tag
-            tag_obj = Tags.objects.filter(name=category_name)
-            tag_obj = tag_obj.first()
+            if category_name:
+                tag_obj, created = Tags.objects.get_or_create(
+                    name=category_name,
+                    defaults={
+                        "description": f"Автоматически созданная категория для {category_name}"
+                    },
+                )
+                if created:
+                    print(f"Создан новый тег: {category_name}")
+            else:
+                # Если NLP не смог определить категорию, используем тег по умолчанию
+                tag_obj, created = Tags.objects.get_or_create(
+                    name="Места",
+                    defaults={"description": "Категория по умолчанию для мест"},
+                )
+                if created:
+                    print("Создан тег по умолчанию: Места")
+
             print(f"{tag_obj=}")
 
             # Download image

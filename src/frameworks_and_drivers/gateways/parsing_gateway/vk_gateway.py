@@ -412,7 +412,12 @@ class ParsingVK(BaseGateway):
             self.filter_content()
 
             result = [
-                {"id": post.id, "text": post.text, "image": post.image}
+                {
+                    "id": post.id,
+                    "text": post.text,
+                    "image": post.image,
+                    "city": "nn",  # Все VK группы относятся к Нижнему Новгороду
+                }
                 for post in self.posts
             ]
 
