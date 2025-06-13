@@ -67,8 +67,6 @@ class NLPProcessor(NLPProcessorBase):
 
     def _send_request(self, url, api_key, model, prompt):
         logger.debug("Отправляем запрос к API: %s, модель=%s", url, model)
-        logger.debug("Длина промпта: %d символов", len(prompt))
-
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -78,10 +76,9 @@ class NLPProcessor(NLPProcessorBase):
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
-
         max_retries = 3
-        timeout = 30  # увеличиваем таймаут до 30 секунд
-        retry_delay = 5  # задержка между попытками в секундах
+        timeout = 30
+        retry_delay = 5
 
         for attempt in range(max_retries):
             try:
@@ -91,13 +88,16 @@ class NLPProcessor(NLPProcessorBase):
                 resp.raise_for_status()
                 data = resp.json()
                 choices = data.get("choices", [])
+
                 if not choices:
                     logger.warning("API вернул пустые choices.")
                     return ""
+
                 content = choices[0]["message"]["content"]
                 logger.debug("Ответ API получен успешно")
                 return content
             except requests.Timeout:
+                logger.error(f"Ответ от модели {resp.json()}")
                 logger.warning(
                     f"Таймаут при запросе к API (попытка {attempt + 1}/{max_retries})"
                 )
