@@ -106,8 +106,3 @@ def generate_image_with_kandinsky(prompt: str) -> bytes:
         return b""
     image_data = base64.b64decode(images_base64[0])
     return image_data
-
-
-generate_image_with_kandinsky(
-    "Всероссийский марафон классической музыки «Кантата.Россия» — это концерты по всей стране от Владивостока до Калининграда. В Нижнем Новгороде концерт пройдет в концертном Пакгаузе при участии оркестра La Voce Strumentale."
-)
