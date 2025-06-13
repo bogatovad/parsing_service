@@ -120,11 +120,29 @@ class ParsingVK(BaseGateway):
         """
         logger.info("Creating VK session")
         try:
+            if not self.ACCESS_TOKEN:
+                raise Exception("VK ACCESS_TOKEN is not set or empty")
+
+            logger.debug(f"Using VK API version: {self.VERSION_VK_API}")
+            logger.debug(
+                f"Token length: {len(self.ACCESS_TOKEN) if self.ACCESS_TOKEN else 0}"
+            )
+
             vk_session = vk_api.VkApi(token=self.ACCESS_TOKEN)
             vk = vk_session.get_api()
+
+            # Проверим токен простым запросом
+            try:
+                test_response = vk.users.get(user_ids=1, v=self.VERSION_VK_API)
+                logger.debug(f"Token validation successful: {test_response}")
+            except Exception as token_test_error:
+                logger.error(f"Token validation failed: {token_test_error}")
+                raise Exception(f"Invalid VK token: {token_test_error}")
+
             logger.info("VK session created successfully")
             return vk
         except vk_api.exceptions.ApiError as e:
+            logger.error(f"VK API Error during session creation: {e}")
             self.handle_vk_error(e)
         except Exception as e:
             logger.error(f"Error creating VK session: {str(e)}")
@@ -160,11 +178,36 @@ class ParsingVK(BaseGateway):
             ExeptionCheckAnswerKeys: Если структура ответа некорректна
         """
         try:
-            if "response" not in response:
-                raise ExeptionCheckAnswerKeys("В ответе нет ключа - response")
-            if "items" not in response["response"]:
+            # Добавляем отладочное логирование для понимания структуры ответа
+            logger.debug(
+                f"API response keys: {list(response.keys()) if response else 'None'}"
+            )
+
+            # Проверяем, есть ли ошибка в ответе
+            if "error" in response:
+                logger.error(f"VK API returned error: {response['error']}")
+                raise ExeptionCheckAnswerKeys(f"VK API error: {response['error']}")
+
+            # Новая логика: VK API может возвращать данные напрямую или в обертке "response"
+            if "response" in response:
+                # Старый формат с оберткой
+                api_response = response["response"]
+                logger.debug("Using wrapped response format")
+            else:
+                # Новый формат без обертки - данные напрямую
+                api_response = response
+                logger.debug("Using direct response format")
+
+            # Проверяем наличие ключа items в данных
+            if "items" not in api_response:
+                logger.error(f"Response structure: {api_response}")
                 raise ExeptionCheckAnswerKeys("В ответе нет ключа - items")
-            return response["response"]
+
+            logger.debug(
+                f"Successfully validated API response with {len(api_response.get('items', []))} items"
+            )
+            return api_response
+
         except ExeptionCheckAnswerKeys as e:
             logger.error(f"API response validation failed: {str(e)}")
             raise
@@ -189,9 +232,14 @@ class ParsingVK(BaseGateway):
             Dict[str, Any]: Ответ API с постами
         """
         try:
+            logger.debug(
+                f"Making API call: wall.get(domain={group}, v={self.VERSION_VK_API}, count={count})"
+            )
             response = vk.wall.get(domain=group, v=self.VERSION_VK_API, count=count)
+            logger.debug(f"Raw API response type: {type(response)}")
             return self.validate_api_response(response)
         except vk_api.exceptions.ApiError as e:
+            logger.error(f"VK API Error for group {group}: {e}")
             self.handle_vk_error(e, retry_count)
             if retry_count < self.MAX_RETRIES:
                 return self.parse_posts(vk, group, count, retry_count + 1)
@@ -261,6 +309,7 @@ class ParsingVK(BaseGateway):
             amount = amount if amount is not None else 3
             group_ids = self.get_group_ids()
             responses = []
+            failed_groups = []
 
             logger.info(f"Will parse {amount} posts from {len(group_ids)} groups")
 
@@ -271,21 +320,38 @@ class ParsingVK(BaseGateway):
                 for i, group in enumerate(group_ids):
                     posts_to_fetch = posts_per_group + (1 if i < extra_posts else 0)
                     logger.debug(f"Parsing group {group} ({i + 1}/{len(group_ids)})")
-                    response = self.parse_posts(vk, group, posts_to_fetch)
-                    responses.append(response)
+                    try:
+                        response = self.parse_posts(vk, group, posts_to_fetch)
+                        responses.append(response)
+                        logger.debug(f"Successfully parsed group {group}")
+                    except Exception as e:
+                        logger.error(f"Failed to parse group {group}: {str(e)}")
+                        failed_groups.append(group)
+                        continue  # Продолжаем с следующей группой
             else:
                 for i, group in enumerate(group_ids[:amount]):
                     logger.debug(f"Parsing group {group} ({i + 1}/{amount})")
-                    response = self.parse_posts(vk, group, 1)
-                    responses.append(response)
+                    try:
+                        response = self.parse_posts(vk, group, 1)
+                        responses.append(response)
+                        logger.debug(f"Successfully parsed group {group}")
+                    except Exception as e:
+                        logger.error(f"Failed to parse group {group}: {str(e)}")
+                        failed_groups.append(group)
+                        continue  # Продолжаем с следующей группой
 
             logger.info(
                 f"Successfully parsed {len(responses)} responses from VK groups"
             )
+            if failed_groups:
+                logger.warning(
+                    f"Failed to parse {len(failed_groups)} groups: {failed_groups}"
+                )
+
             self.responses = responses
 
         except Exception as e:
-            logger.error(f"Error during VK parsing: {str(e)}")
+            logger.error(f"Critical error during VK parsing: {str(e)}")
             raise
 
     def filter_content(self) -> None:
@@ -295,19 +361,44 @@ class ParsingVK(BaseGateway):
             processed_posts = 0
             filtered_posts = []
 
-            for response in self.responses:
-                for post_data in response["items"]:
-                    processed_post = self.process_post(post_data)
-                    if processed_post:
-                        filtered_posts.append(processed_post)
-                        processed_posts += 1
+            if not self.responses:
+                logger.warning(
+                    "No responses to filter - all groups may have failed to parse"
+                )
+                self.posts = []
+                return
+
+            for response_idx, response in enumerate(self.responses):
+                try:
+                    if not response or "items" not in response:
+                        logger.warning(
+                            f"Invalid response structure at index {response_idx}, skipping"
+                        )
+                        continue
+
+                    for post_idx, post_data in enumerate(response["items"]):
+                        try:
+                            processed_post = self.process_post(post_data)
+                            if processed_post:
+                                filtered_posts.append(processed_post)
+                                processed_posts += 1
+                        except Exception as e:
+                            logger.error(
+                                f"Error processing post {post_idx} from response {response_idx}: {str(e)}"
+                            )
+                            continue  # Продолжаем с следующим постом
+
+                except Exception as e:
+                    logger.error(f"Error processing response {response_idx}: {str(e)}")
+                    continue  # Продолжаем со следующим response
 
             self.posts = filtered_posts
             logger.info(f"Successfully filtered and processed {processed_posts} posts")
 
         except Exception as e:
-            logger.error(f"Error during content filtering: {str(e)}")
-            raise
+            logger.error(f"Critical error during content filtering: {str(e)}")
+            # Не поднимаем исключение, чтобы не сломать весь процесс
+            self.posts = []
 
     def fetch_content(self) -> List[Dict[str, Any]]:
         """
@@ -316,12 +407,24 @@ class ParsingVK(BaseGateway):
         Returns:
             List[Dict[str, Any]]: Список обработанных постов
         """
-        self.parsing(amount=100)
-        self.filter_content()
-        return [
-            {"id": post.id, "text": post.text, "image": post.image}
-            for post in self.posts
-        ]
+        try:
+            self.parsing(amount=100)
+            self.filter_content()
+
+            result = [
+                {"id": post.id, "text": post.text, "image": post.image}
+                for post in self.posts
+            ]
+
+            logger.info(
+                f"VK parsing completed. Successfully retrieved {len(result)} posts"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Error in fetch_content: {str(e)}")
+            # Возвращаем пустой список вместо падения, если ничего не удалось спарсить
+            return []
 
     def print_posts(self) -> None:
         """Выводит информацию о постах в консоль."""
