@@ -41,12 +41,7 @@ class GetContentKudaGoUseCase(AbstractUseCase):
             location = element.get("location", "Unknown")
 
             # Создаем уникальный идентификатор из названия, даты и места
-            if isinstance(date_start, datetime):
-                date_str = date_start.strftime("%Y-%m-%d")
-            else:
-                date_str = str(date_start)
-
-            unique_id = f"kudago_{name[:50]}_{date_str}_{location[:30]}"
+            unique_id = f"kudago_{name[:50]}_{location[:30]}"
             # Заменяем проблемные символы
             unique_id = re.sub(r"[^\w\-_]", "_", unique_id)
 
