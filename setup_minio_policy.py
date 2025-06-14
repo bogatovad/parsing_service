@@ -20,6 +20,10 @@ def setup_minio_policy():
     minio_secret_key = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
     bucket_name = os.getenv("MINIO_BUCKET_NAME", "afisha-files")
 
+    print(f"MinIO Endpoint: {minio_endpoint}")
+    print(f"Bucket: {bucket_name}")
+    print(f"Access Key: {minio_access_key}")
+
     # Создаем клиент MinIO
     client = Minio(
         minio_endpoint,
@@ -70,14 +74,4 @@ def setup_minio_policy():
 
 
 if __name__ == "__main__":
-    # Загружаем переменные окружения из файла
-    try:
-        with open("environments/minio.env", "r") as f:
-            for line in f:
-                if line.strip() and not line.startswith("#"):
-                    key, value = line.strip().split("=", 1)
-                    os.environ[key] = value
-    except FileNotFoundError:
-        print("Файл environments/minio.env не найден")
-
     setup_minio_policy()
