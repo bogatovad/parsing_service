@@ -185,6 +185,11 @@ class GetContentTgUseCase:
             if date_end < date_start:
                 date_end = date_start
 
+            # Валидация дат - пропускаем устаревшие события
+            if not self._is_event_valid(date_start, date_end):
+                logger.info(f"Пропускаем устаревшее событие Telegram: {name}")
+                return None
+
             time_ = event.get("time", "00:00")
             location = event.get("location", "Место не указано")
             cost = event.get("cost", 0)
@@ -230,3 +235,27 @@ class GetContentTgUseCase:
                 logger.debug(f"Ошибка парсинга даты '{value}': {str(e)}")
 
         return datetime.now()
+
+    @staticmethod
+    def _is_event_valid(date_start, date_end):
+        """
+        Проверяет, что событие не устарело.
+        Возвращает False для событий которые уже завершились.
+        """
+        try:
+            current_date = datetime.now()
+
+            # Если есть дата окончания, проверяем её
+            if date_end and isinstance(date_end, datetime):
+                return current_date <= date_end
+
+            # Если нет даты окончания, проверяем дату начала
+            if isinstance(date_start, datetime):
+                return current_date.date() <= date_start.date()
+
+            # Если даты не datetime объекты, считаем событие валидным
+            return True
+
+        except Exception as e:
+            logger.error(f"Ошибка при валидации даты: {e}")
+            return True  # В случае ошибки не блокируем событие

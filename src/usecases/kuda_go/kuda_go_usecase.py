@@ -10,6 +10,9 @@ from interface_adapters.repositories.base_file_repository import FileRepositoryP
 from interface_adapters.repositories.base_content_repository import (
     ContentRepositoryProtocol,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class GetContentKudaGoUseCase(AbstractUseCase):
@@ -61,6 +64,16 @@ class GetContentKudaGoUseCase(AbstractUseCase):
 
         # Теперь обрабатываем только уникальные события
         for element, unique_id in filtered_raw_content:
+            # Валидация дат - пропускаем устаревшие события
+            date_start = element.get("date_start", datetime.now())
+            date_end = element.get("date_end", date_start)
+
+            if not self._is_event_valid(date_start, date_end):
+                logger.info(
+                    f"Пропускаем устаревшее событие KudaGo: {element.get('name', 'Unknown')}"
+                )
+                continue
+
             processed_link_name = self.nlp_processor.generate_link_title(
                 element.get("description")
             )
@@ -78,8 +91,8 @@ class GetContentKudaGoUseCase(AbstractUseCase):
                 tags=[processed_categories],
                 image=element.get("image", b"gg"),
                 contact=[{processed_link_name: element.get("url", "")}],
-                date_start=element.get("date_start", datetime.now()),
-                date_end=element.get("date_end", datetime.now()),
+                date_start=date_start,
+                date_end=date_end,
                 time=element.get("time", "00:00"),
                 location=location,
                 cost=element.get("cost", 0),
@@ -89,3 +102,27 @@ class GetContentKudaGoUseCase(AbstractUseCase):
 
             self.content_repo.save_one_content(content_element)
         return True
+
+    @staticmethod
+    def _is_event_valid(date_start, date_end):
+        """
+        Проверяет, что событие не устарело.
+        Возвращает False для событий которые уже завершились.
+        """
+        try:
+            current_date = datetime.now()
+
+            # Если есть дата окончания, проверяем её
+            if date_end and isinstance(date_end, datetime):
+                return current_date <= date_end
+
+            # Если нет даты окончания, проверяем дату начала
+            if isinstance(date_start, datetime):
+                return current_date.date() <= date_start.date()
+
+            # Если даты не datetime объекты, считаем событие валидным
+            return True
+
+        except Exception as e:
+            logger.error(f"Ошибка при валидации даты: {e}")
+            return True  # В случае ошибки не блокируем событие

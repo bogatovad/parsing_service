@@ -61,6 +61,27 @@ class GetContentTimepadUseCase(AbstractUseCase):
                 logging.info(f"Processing content from Timepad {content}")
                 unique_id = str(content.get("id")) + "_timepad"
 
+                # Валидация дат - пропускаем устаревшие события
+                try:
+                    date_start = datetime.strptime(
+                        content.get("starts_at"), "%Y-%m-%dT%H:%M:%S%z"
+                    )
+                    date_end = content.get("ends_at")
+                    date_end = (
+                        datetime.strptime(date_end, "%Y-%m-%dT%H:%M:%S%z")
+                        if date_end
+                        else None
+                    )
+
+                    if not self._is_event_valid(date_start, date_end):
+                        logging.info(
+                            f"Пропускаем устаревшее событие Timepad: {content.get('name', 'Unknown')}"
+                        )
+                        continue
+                except Exception as e:
+                    logging.error(f"Ошибка при валидации даты Timepad: {e}")
+                    continue
+
                 try:
                     logging.info(f"{content=}")
                     if "poster_image" in content:
@@ -131,3 +152,27 @@ class GetContentTimepadUseCase(AbstractUseCase):
             except:  # noqa: E722
                 continue
         return True
+
+    @staticmethod
+    def _is_event_valid(date_start, date_end):
+        """
+        Проверяет, что событие не устарело.
+        Возвращает False для событий которые уже завершились.
+        """
+        try:
+            current_date = datetime.now()
+
+            # Если есть дата окончания, проверяем её
+            if date_end and isinstance(date_end, datetime):
+                return current_date <= date_end
+
+            # Если нет даты окончания, проверяем дату начала
+            if isinstance(date_start, datetime):
+                return current_date.date() <= date_start.date()
+
+            # Если даты не datetime объекты, считаем событие валидным
+            return True
+
+        except Exception as e:
+            logging.error(f"Ошибка при валидации даты: {e}")
+            return True  # В случае ошибки не блокируем событие
