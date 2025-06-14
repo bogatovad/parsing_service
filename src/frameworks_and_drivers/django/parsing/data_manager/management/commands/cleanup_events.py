@@ -204,14 +204,16 @@ class Command(BaseCommand):
             Q(date_start__isnull=False)
             & Q(date_end__isnull=False)
             & ~Q(date_start=F("date_end"))  # Исключаем однодневные события
-            & Q(date_end__lt=threshold_date)
+            & Q(date_end__lte=threshold_date)  # Изменено с __lt на __lte (включительно)
         )
 
         # 2. Однодневные события без даты окончания
         single_day_no_end = Content.objects.filter(
             Q(date_start__isnull=False)
             & Q(date_end__isnull=True)
-            & Q(date_start__lt=threshold_date)
+            & Q(
+                date_start__lte=threshold_date
+            )  # Изменено с __lt на __lte (включительно)
         )
 
         # 3. Однодневные события с одинаковыми датами начала и окончания
@@ -219,7 +221,9 @@ class Command(BaseCommand):
             Q(date_start__isnull=False)
             & Q(date_end__isnull=False)
             & Q(date_start=F("date_end"))
-            & Q(date_start__lt=threshold_date)
+            & Q(
+                date_start__lte=threshold_date
+            )  # Изменено с __lt на __lte (включительно)
         )
 
         return multi_day_events, single_day_no_end, single_day_same_dates

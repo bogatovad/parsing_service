@@ -274,21 +274,21 @@ def delete_outdated_events(self):
         today = timezone.now().date()
         yesterday = today - timedelta(days=1)
 
-        logger.info(f"Checking events before {yesterday} (UTC)")
+        logger.info(f"Deleting events before or on {yesterday} (UTC). Today is {today}")
 
-        # 1. События с указанными датами начала и окончания
+        # 1. События с указанными датами начала и окончания (многодневные, которые уже завершились)
         multi_day_events = Content.objects.filter(
             Q(date_start__isnull=False)
             & Q(date_end__isnull=False)
             & ~Q(date_start=F("date_end"))  # Исключаем однодневные события
-            & Q(date_end__lt=yesterday)
+            & Q(date_end__lte=yesterday)  # Изменено с __lt на __lte (включительно)
         )
 
         # 2. Однодневные события без даты окончания
         single_day_no_end = Content.objects.filter(
             Q(date_start__isnull=False)
             & Q(date_end__isnull=True)
-            & Q(date_start__lt=yesterday)
+            & Q(date_start__lte=yesterday)  # Изменено с __lt на __lte (включительно)
         )
 
         # 3. Однодневные события с одинаковыми датами начала и окончания
@@ -296,7 +296,7 @@ def delete_outdated_events(self):
             Q(date_start__isnull=False)
             & Q(date_end__isnull=False)
             & Q(date_start=F("date_end"))
-            & Q(date_start__lt=yesterday)
+            & Q(date_start__lte=yesterday)  # Изменено с __lt на __lte (включительно)
         )
 
         # Логируем каждый тип событий отдельно
