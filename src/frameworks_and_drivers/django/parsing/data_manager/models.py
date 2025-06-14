@@ -46,7 +46,7 @@ class MacroCategory(models.Model):
     )
 
     class Meta:
-        db_table = "event_macro_category"
+        db_table = "event_macrocategory"
 
     def __str__(self):
         return self.name
