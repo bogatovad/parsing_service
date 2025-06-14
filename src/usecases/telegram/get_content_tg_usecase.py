@@ -243,15 +243,24 @@ class GetContentTgUseCase:
         Возвращает False для событий которые уже завершились.
         """
         try:
-            current_date = datetime.now()
+            from django.utils import timezone
+
+            # Используем timezone-aware текущую дату
+            current_date = timezone.now()
 
             # Если есть дата окончания, проверяем её
             if date_end and isinstance(date_end, datetime):
+                # Если date_end timezone-naive, делаем её aware
+                if date_end.tzinfo is None:
+                    date_end = timezone.make_aware(date_end)
                 return current_date <= date_end
 
             # Если нет даты окончания, проверяем дату начала
             if isinstance(date_start, datetime):
-                return current_date.date() <= date_start.date()
+                # Если date_start timezone-naive, делаем её aware
+                if date_start.tzinfo is None:
+                    date_start = timezone.make_aware(date_start)
+                return current_date <= date_start
 
             # Если даты не datetime объекты, считаем событие валидным
             return True

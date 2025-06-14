@@ -118,11 +118,21 @@ class GetContentVkUseCase(AbstractUseCase):
                 return None
 
             try:
+                from django.utils import timezone
+
                 date_start = datetime.strptime(date_start_str, "%Y-%m-%d")
                 date_end = datetime.strptime(date_end_str, "%Y-%m-%d")
-                current_date = datetime.now()
 
-                if current_date > date_end:
+                # Используем timezone-aware текущую дату
+                current_date = timezone.now()
+
+                # Делаем date_end timezone-aware для корректного сравнения
+                if date_end.tzinfo is None:
+                    date_end_aware = timezone.make_aware(date_end)
+                else:
+                    date_end_aware = date_end
+
+                if current_date > date_end_aware:
                     logging.info("Мероприятие завершено.")
                     return None
             except ValueError as e:
