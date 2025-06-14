@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -146,24 +145,6 @@ CELERY_RESULT_SERIALIZER = "json"
 
 # Настройки для django-celery-beat
 DJANGO_CELERY_BEAT_TZ_AWARE = True
-
-# Расписание задач Celery Beat
-CELERY_BEAT_SCHEDULE = {
-    "run-main-parsers-morning": {
-        "task": "run_main_parsers",
-        "schedule": crontab(hour=9, minute=0),  # Запуск в 9:00
-        "options": {
-            "expires": 3600,  # Задача истекает через час
-        },
-    },
-    "run-main-parsers-evening": {
-        "task": "run_main_parsers",
-        "schedule": crontab(hour=18, minute=0),  # Запуск в 18:00
-        "options": {
-            "expires": 3600,  # Задача истекает через час
-        },
-    },
-}
 
 MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER")
 MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD")

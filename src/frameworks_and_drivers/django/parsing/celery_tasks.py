@@ -101,7 +101,6 @@ def run_all_parsers():
         parse_vk.s(),
         parse_timepad.s(),
         parse_kudago.s(),
-        parse_places.s(),
     )
 
     # Запускаем цепочку
@@ -116,11 +115,14 @@ def run_main_parsers():
     1. KudaGo
     2. Timepad
     3. Telegram
+    4. VK
     """
     logger.info("Starting sequential execution of main parsers")
 
     # Создаем цепочку задач в нужном порядке
-    parser_chain = chain(parse_kudago.s(), parse_timepad.s(), parse_telegram.s())
+    parser_chain = chain(
+        parse_kudago.s(), parse_timepad.s(), parse_telegram.s(), parse_vk.s()
+    )
 
     # Запускаем цепочку
     result = parser_chain()
@@ -129,9 +131,48 @@ def run_main_parsers():
     return result
 
 
+def setup_cleanup_schedule():
+    """
+    Настраивает расписание для очистки старых мероприятий
+    Запускается ежедневно в 23:00 для очистки истекших событий
+    """
+    try:
+        logger.info("Setting up schedule for cleanup task")
+
+        # Создаем или получаем расписание для вечерней очистки (23:00)
+        cleanup_schedule, _ = CrontabSchedule.objects.get_or_create(
+            hour=23,
+            minute=0,
+            defaults={
+                "day_of_week": "*",
+                "day_of_month": "*",
+                "month_of_year": "*",
+            },
+        )
+
+        # Создаем или обновляем задачу для очистки
+        PeriodicTask.objects.update_or_create(
+            name="Daily Cleanup Outdated Events",
+            defaults={
+                "task": "delete_outdated_events",
+                "crontab": cleanup_schedule,
+                "enabled": True,
+                "kwargs": json.dumps({}),
+                "description": "Ежедневная очистка устаревших мероприятий в 23:00",
+            },
+        )
+
+        logger.info("Successfully set up schedule for cleanup task")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error setting up cleanup schedule: {str(e)}")
+        raise
+
+
 def setup_main_parsers_schedule():
     """
-    Настраивает расписание запуска основных парсеров (KudaGo, Timepad, Telegram)
+    Настраивает расписание запуска основных парсеров (KudaGo, Timepad, Telegram, VK)
     дважды в день: утром в 9:00 и вечером в 19:00
     """
     try:
@@ -167,7 +208,7 @@ def setup_main_parsers_schedule():
                 "crontab": morning_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Запуск основных парсеров (KudaGo, Timepad, Telegram) каждое утро в 9:00",
+                "description": "Запуск основных парсеров (KudaGo, Timepad, Telegram, VK) каждое утро в 9:00",
             },
         )
 
@@ -179,7 +220,7 @@ def setup_main_parsers_schedule():
                 "crontab": evening_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Запуск основных парсеров (KudaGo, Timepad, Telegram) каждый вечер в 19:00",
+                "description": "Запуск основных парсеров (KudaGo, Timepad, Telegram, VK) каждый вечер в 19:00",
             },
         )
 
@@ -197,24 +238,12 @@ def setup_all_schedules():
     try:
         logger.info("Setting up all schedules")
         setup_main_parsers_schedule()
+        setup_cleanup_schedule()  # Добавляем настройку расписания очистки
         logger.info("Successfully set up all schedules")
         return True
     except Exception as e:
         logger.error(f"Error setting up schedules: {str(e)}")
         return False
-
-
-# Обновляем словарь доступных задач
-PARSER_TASKS = {
-    "tg": parse_telegram,
-    "vk": parse_vk,
-    "timepad": parse_timepad,
-    "kudago": parse_kudago,
-    "places": parse_places,
-    "all": run_all_parsers,
-    "main": run_main_parsers,
-    "setup_schedules": setup_all_schedules,  # Добавляем задачу настройки расписания
-}
 
 
 @app.task(name="test_parser")
@@ -309,3 +338,17 @@ def delete_outdated_events(self):
     except Exception as exc:
         logger.error(f"Error in delete_outdated_events: {exc}", exc_info=True)
         self.retry(exc=exc, countdown=3600)
+
+
+# Обновляем словарь доступных задач
+PARSER_TASKS = {
+    "tg": parse_telegram,
+    "vk": parse_vk,
+    "timepad": parse_timepad,
+    "kudago": parse_kudago,
+    "places": parse_places,
+    "all": run_all_parsers,
+    "main": run_main_parsers,
+    "setup_schedules": setup_all_schedules,  # Добавляем задачу настройки расписания
+    "cleanup": delete_outdated_events,  # Добавляем задачу очистки для ручного запуска
+}
