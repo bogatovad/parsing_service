@@ -121,19 +121,30 @@ class DjangoContentRepository(ContentRepositoryProtocol):
             # Сохраняем основной объект
             content_for_save.save()
 
-            # Обрабатываем теги
+            # Обрабатываем теги - используем только существующие
             for tag_name in content.tags:
                 if not tag_name:
                     continue
                 try:
                     tag_name = tag_name.strip()
+                    # Ищем существующий тег (без привязки к macro_category)
                     tag_for_save = Tags.objects.filter(
                         name__iexact=tag_name, macro_category__name="events"
                     ).first()
 
                     if not tag_for_save:
-                        tag_for_save = Tags.objects.create(
-                            name=tag_name, description=f"Tag for {name}"
+                        # Если тег не найден, используем "Разное"
+                        tag_for_save = Tags.objects.filter(
+                            name__iexact="Разное"
+                        ).first()
+                        if not tag_for_save:
+                            # Если даже "Разное" нет, создаем его
+                            tag_for_save = Tags.objects.create(
+                                name="Разное",
+                                description="Категория для неопределенных событий",
+                            )
+                        logging.info(
+                            f"Тег '{tag_name}' не найден, используем 'Разное' для события: {name}"
                         )
 
                     content_for_save.tags.add(tag_for_save)

@@ -212,35 +212,6 @@ class NLPProcessor(NLPProcessorBase):
         except Exception as e:
             logger.warning(f"Ошибка при определении категории через API: {str(e)}")
 
-        # Если API не сработал, используем локальные правила
-        text = event_text.lower()
-
-        # Правила определения категории
-        if any(word in text for word in ["концерт", "музыка", "опера", "джаз", "рок"]):
-            return "Музыка"
-        elif any(word in text for word in ["театр", "спектакль", "драма", "комедия"]):
-            return "Театр"
-        elif any(word in text for word in ["выставка", "галерея", "искусство"]):
-            return "Искусство"
-        elif any(word in text for word in ["лекция", "семинар", "мастер-класс"]):
-            return "Образование"
-        elif any(word in text for word in ["кино", "фильм", "премьера"]):
-            return "Кино"
-        elif any(word in text for word in ["дети", "ребенок", "семья"]):
-            return "Семья"
-        elif any(word in text for word in ["экскурсия", "прогулка", "тур"]):
-            return "Экскурсия"
-        elif any(word in text for word in ["it", "программирование", "разработка"]):
-            return "IT-Ивенты"
-        elif any(word in text for word in ["стендап", "юмор", "комик"]):
-            return "StandUp"
-        elif any(word in text for word in ["еда", "кулинария", "гастрономия"]):
-            return "Еда"
-        elif any(word in text for word in ["спорт", "фитнес", "тренировка"]):
-            return "Спорт"
-
-        return "Разное"
-
     def generate_link_title(self, event_text: str) -> str:
         """
         Генерирует название для ссылки.
