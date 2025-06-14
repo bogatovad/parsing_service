@@ -91,12 +91,15 @@ class Command(BaseCommand):
                             )
                         )
 
-                    if isinstance(principal, dict) and principal.get("AWS") != "*":
-                        self.stdout.write(
-                            self.style.WARNING(
-                                f"  ⚠ Внимание: Principal не равен '*': {principal}"
+                    # Проверяем Principal - может быть "*" или ["*"]
+                    if isinstance(principal, dict):
+                        aws_principal = principal.get("AWS")
+                        if aws_principal != "*" and aws_principal != ["*"]:
+                            self.stdout.write(
+                                self.style.WARNING(
+                                    f"  ⚠ Внимание: Principal не равен '*' или ['*']: {principal}"
+                                )
                             )
-                        )
 
                     if isinstance(actions, list):
                         if "s3:GetObject" not in actions:
@@ -114,14 +117,19 @@ class Command(BaseCommand):
                             )
 
                     expected_resource = f"arn:aws:s3:::{bucket_name}/*"
-                    if "GetObject" in str(actions) and resource != expected_resource:
-                        self.stdout.write(
-                            self.style.WARNING(
-                                "  ⚠ Внимание: Resource не соответствует ожидаемому:"
+                    # Resource может быть строкой или списком
+                    if "GetObject" in str(actions):
+                        resource_ok = resource == expected_resource or resource == [
+                            expected_resource
+                        ]
+                        if not resource_ok:
+                            self.stdout.write(
+                                self.style.WARNING(
+                                    "  ⚠ Внимание: Resource не соответствует ожидаемому:"
+                                )
                             )
-                        )
-                        self.stdout.write(f"    Ожидается: {expected_resource}")
-                        self.stdout.write(f"    Получено: {resource}")
+                            self.stdout.write(f"    Ожидается: {expected_resource}")
+                            self.stdout.write(f"    Получено: {resource}")
 
             except S3Error as e:
                 if "NoSuchBucketPolicy" in str(e):
@@ -141,10 +149,12 @@ class Command(BaseCommand):
             # 3. Тестируем доступ к конкретным файлам
             self.stdout.write("\n=== Тестирование доступа к файлам ===")
 
-            # Получаем список файлов
-            objects = list(
-                client.list_objects(bucket_name, prefix="images/", max_keys=10)
-            )
+            # Получаем список файлов (первые 10)
+            objects = []
+            for obj in client.list_objects(bucket_name, prefix="images/"):
+                objects.append(obj)
+                if len(objects) >= 10:
+                    break
 
             if not objects:
                 self.stdout.write(

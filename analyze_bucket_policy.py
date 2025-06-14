@@ -97,8 +97,12 @@ def analyze_bucket_policy():
         # 3. Тестируем доступ к конкретным файлам
         print("\n=== Тестирование доступа к файлам ===")
 
-        # Получаем список файлов
-        objects = list(client.list_objects(bucket_name, prefix="images/", max_keys=10))
+        # Получаем список файлов (первые 10)
+        objects = []
+        for obj in client.list_objects(bucket_name, prefix="images/"):
+            objects.append(obj)
+            if len(objects) >= 10:
+                break
 
         if not objects:
             print("Нет файлов в папке images/ для тестирования")
