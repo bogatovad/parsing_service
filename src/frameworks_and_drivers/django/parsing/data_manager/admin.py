@@ -23,6 +23,7 @@ class ContentAdmin(admin.ModelAdmin):
         "city",
         "unique_id",
         "get_tags",
+        "get_macro",
     )
 
 

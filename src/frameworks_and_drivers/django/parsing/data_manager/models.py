@@ -97,6 +97,10 @@ class Content(GenericModel):
     def get_tags(self):
         return "\n".join([t.name for t in self.tags.all()])
 
+    def get_macro(self) -> str:
+        first_tag = self.tags.all()[0]
+        return str(first_tag.macro_category.name)
+
     def __str__(self):
         return f"{self.name}"
 

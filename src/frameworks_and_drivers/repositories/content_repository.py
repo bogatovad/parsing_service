@@ -128,7 +128,7 @@ class DjangoContentRepository(ContentRepositoryProtocol):
                 try:
                     tag_name = tag_name.strip()
                     tag_for_save = Tags.objects.filter(
-                        name__iexact=tag_name, macro_category="events"
+                        name__iexact=tag_name, macro_category__name="events"
                     ).first()
 
                     if not tag_for_save:

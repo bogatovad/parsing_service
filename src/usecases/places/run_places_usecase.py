@@ -100,7 +100,7 @@ class GetPlacesUsecase:
                 try:
                     category_name = category_name.strip()
                     tag_for_save = Tags.objects.filter(
-                        name__iexact=category_name, macro_category="places"
+                        name__iexact=category_name, macro_category__name="places"
                     ).first()
 
                     if not tag_for_save:
