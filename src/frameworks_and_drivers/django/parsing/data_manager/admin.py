@@ -12,19 +12,31 @@ from frameworks_and_drivers.django.parsing.data_manager.models import (
 class ContentAdmin(admin.ModelAdmin):
     list_display = (
         "name",
-        "description",
-        "image",
-        "contact",
+        "city",
         "date_start",
         "date_end",
-        "time",
-        "location",
-        "cost",
-        "city",
-        "unique_id",
+        "event_type",
+        "publisher_type",
         "get_tags",
         "get_macro",
+        "created",
     )
+    list_filter = (
+        "city",
+        "event_type",
+        "publisher_type",
+        "date_start",
+        "created",
+    )
+    search_fields = (
+        "name",
+        "description",
+        "location",
+        "unique_id",
+    )
+    readonly_fields = ("unique_id", "created", "updated")
+    date_hierarchy = "date_start"
+    list_per_page = 25
 
 
 @admin.register(Tags)

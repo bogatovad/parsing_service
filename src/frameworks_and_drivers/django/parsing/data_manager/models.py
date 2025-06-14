@@ -95,11 +95,24 @@ class Content(GenericModel):
     publisher_id = models.IntegerField(default=1_000_000)
 
     def get_tags(self):
-        return "\n".join([t.name for t in self.tags.all()])
+        tags = self.tags.all()
+        if tags.exists():
+            return "\n".join([t.name for t in tags])
+        return "Без тегов"
+
+    get_tags.short_description = "Теги"
 
     def get_macro(self) -> str:
-        first_tag = self.tags.all()[0]
-        return str(first_tag.macro_category.name)
+        tags = self.tags.all()
+        if tags.exists():
+            first_tag = tags[0]
+            if first_tag.macro_category:
+                return str(first_tag.macro_category.name)
+            else:
+                return "Без категории"
+        return "Без тегов"
+
+    get_macro.short_description = "Категория"
 
     def __str__(self):
         return f"{self.name}"
