@@ -15,7 +15,7 @@ from usecases.kuda_go.kuda_go_usecase import GetContentKudaGoUseCase
 from usecases.telegram.get_content_tg_usecase import GetContentTgUseCase
 from usecases.timepad.timepad_usecase import GetContentTimepadUseCase
 from usecases.vk.vk_usecase import GetContentVkUseCase
-from usecases.places.get_places_usecase import GetPlacesUsecase
+from usecases.places.run_places_usecase import GetPlacesUsecase
 from frameworks_and_drivers.repositories.content_repository import (
     DjangoContentRepository,
 )
