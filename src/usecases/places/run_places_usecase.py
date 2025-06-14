@@ -48,26 +48,11 @@ class GetPlacesUsecase:
                 description + name, "category_prompt_place"
             )
 
-            # Create or get tag
-            if category_name:
-                tag_obj, created = Tags.objects.get_or_create(
-                    name=category_name,
-                    defaults={
-                        "description": f"Автоматически созданная категория для {category_name}"
-                    },
-                )
-                if created:
-                    print(f"Создан новый тег: {category_name}")
-            else:
-                # Если NLP не смог определить категорию, используем тег по умолчанию
-                tag_obj, created = Tags.objects.get_or_create(
-                    name="Места",
-                    defaults={"description": "Категория по умолчанию для мест"},
-                )
-                if created:
-                    print("Создан тег по умолчанию: Места")
+            # Если NLP не смог определить категорию, используем категорию по умолчанию
+            if not category_name:
+                category_name = "Места"
 
-            print(f"{tag_obj=}")
+            print(f"Определена категория: {category_name}")
 
             # Download image
             image_url = place["image"]
@@ -110,8 +95,25 @@ class GetPlacesUsecase:
                 unique_id=unique_id,
             )
 
-            # Add tag
-            content.tags.add(tag_obj)
+            # Обрабатываем тег (используем единый подход)
+            if category_name:
+                try:
+                    category_name = category_name.strip()
+                    tag_for_save = Tags.objects.filter(
+                        name__iexact=category_name, macro_category="places"
+                    ).first()
+
+                    if not tag_for_save:
+                        tag_for_save = Tags.objects.create(
+                            name=category_name, description=f"Tag for {name}"
+                        )
+                        print(f"Создан новый тег: {category_name}")
+
+                    content.tags.add(tag_for_save)
+                except Exception as tag_error:
+                    logging.warning(
+                        f"Ошибка при сохранении тега {category_name}: {str(tag_error)}"
+                    )
 
             # Save image if downloaded
             if image_content:
@@ -120,4 +122,5 @@ class GetPlacesUsecase:
 
             content.save()
 
+            logging.info(f"Успешно сохранено место: {name}")
             print(f"Добавлено: {name}")
