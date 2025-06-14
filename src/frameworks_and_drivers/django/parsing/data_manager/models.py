@@ -161,7 +161,7 @@ class RemovedFavorite(models.Model):
     removed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "event_removed_favorite"
+        db_table = "event_removedfavorite"
         unique_together = ("user", "content")
         indexes = [models.Index(fields=["user", "content"])]
 
@@ -175,7 +175,7 @@ class UserCategoryPreference(models.Model):
     )
 
     class Meta:
-        db_table = "event_user_category_preference"
+        db_table = "event_usercategorypreference"
         unique_together = ("user", "tag")
 
     def __str__(self):
