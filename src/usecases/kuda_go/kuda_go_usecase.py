@@ -1,4 +1,5 @@
 import re
+import hashlib
 from interface_adapters.gateways.parsing_base_gateway.base_gateway import BaseGateway
 from interface_adapters.presenters.schemas import ContentPydanticSchema
 from usecases.common import AbstractUseCase
@@ -35,13 +36,19 @@ class GetContentKudaGoUseCase(AbstractUseCase):
         # Фильтруем сырые данные - убираем дубликаты ДО дорогой NLP обработки
         filtered_raw_content = []
         for element in raw_content:
-            # Генерируем unique_id на основе сырых данных
+            # Генерируем unique_id на основе сырых данных с хэшем
             name = element.get("name", "Default Name FROM KUDA GO")
-            date_start = element.get("date_start", datetime.now())
             location = element.get("location", "Unknown")
+            description = element.get("description", "")
+            time = element.get("time", "")
 
-            # Создаем уникальный идентификатор из названия, даты и места
-            unique_id = f"kudago_{name[:50]}_{location[:30]}"
+            # Создаем строку для хэширования из ключевых полей
+            hash_string = f"{name}_{location}_{description[:100]}_{time}"
+            # Создаем хэш
+            hash_value = hashlib.md5(hash_string.encode("utf-8")).hexdigest()[:8]
+
+            # Создаем уникальный идентификатор с хэшем
+            unique_id = f"kudago_{name[:30]}_{hash_value}"
             # Заменяем проблемные символы
             unique_id = re.sub(r"[^\w\-_]", "_", unique_id)
 
