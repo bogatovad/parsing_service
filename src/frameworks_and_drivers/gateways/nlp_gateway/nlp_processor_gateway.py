@@ -27,7 +27,7 @@ class NLPProcessor(NLPProcessorBase):
         self.thebai_api_key = "sk-te5U1TN6yvTYFuB8Nc8FVGhlQi5BSQL7dkdAaPePqRXNf7Wu"
         self.openrouter_api_url = "https://openrouter.ai/api/v1/chat/completions"
         self.openrouter_api_key = (
-            "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"
+            "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"
         )
         self.attempt_interval = 60
         self.max_retries = 3
@@ -133,7 +133,7 @@ class NLPProcessor(NLPProcessorBase):
             url, api_key, model = (
                 self.openrouter_api_url,
                 self.openrouter_api_key,
-                "anthropic/claude-3.5-sonnet",
+                "mistralai/mistral-7b-instruct",
             )
 
         return self._send_request(url, api_key, model, prompt)
