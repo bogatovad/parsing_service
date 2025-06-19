@@ -206,7 +206,7 @@ class NLPProcessor(NLPProcessorBase):
                 service, "Определи категорию: {text}"
             )
             prompt = category_prompt_template.format(text=event_text)
-            result = self._call_api(prompt, service="thebai")
+            result = self._call_api(prompt, service="openrouter")
             if result and result.strip():
                 return result.strip()
         except Exception as e:
