@@ -161,7 +161,7 @@ class NLPProcessor(NLPProcessorBase):
             .replace("{current_date}", current_date)
             .replace("{current_day}", current_day)
         )
-        raw_response = self._call_api(prompt, service="thebai")
+        raw_response = self._call_api(prompt, service="openrouter")
         parsed_list = self._parse_response(raw_response)
         logger.debug("Результат парсинга: %s объектов", len(parsed_list))
         return parsed_list
@@ -222,5 +222,5 @@ class NLPProcessor(NLPProcessorBase):
             "link_title_prompt", "Придумай название для ссылки: {text}"
         )
         prompt = link_prompt_template.format(text=event_text)
-        result = self._call_api(prompt, service="thebai")
+        result = self._call_api(prompt, service="openrouter")
         return result
