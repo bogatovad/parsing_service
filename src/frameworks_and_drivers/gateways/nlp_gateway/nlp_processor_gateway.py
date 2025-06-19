@@ -121,7 +121,7 @@ class NLPProcessor(NLPProcessorBase):
         logger.error("Все попытки запроса к API завершились неудачно")
         return ""
 
-    def _call_api(self, prompt: str, service: str = "thebai") -> str:
+    def _call_api(self, prompt: str, service: str = "openrouter") -> str:
         """
         Унифицированный метод запроса:
         service == 'thebai' => theb.ai
