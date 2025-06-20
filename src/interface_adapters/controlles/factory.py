@@ -1,5 +1,5 @@
-from frameworks_and_drivers.gateways.nlp_gateway.nlp_processor_gateway import (
-    NLPProcessor,
+from frameworks_and_drivers.gateways.nlp_gateway.nlp_processor_factory import (
+    NLPProcessorFactory,
 )
 from frameworks_and_drivers.gateways.parsing_gateway.kuda_go_gateway1 import (
     KudaGoGateway,
@@ -24,46 +24,90 @@ from frameworks_and_drivers.repositories.file_repository import FileRepositoryPr
 
 class UseCaseFactory:
     @staticmethod
-    def get_tg_content_usecase() -> GetContentTgUseCase:
+    def get_tg_content_usecase(ai_provider: str = "openrouter") -> GetContentTgUseCase:
+        """
+        Создает use case для Telegram с выбранным AI провайдером.
+
+        Args:
+            ai_provider: Имя AI провайдера ("thebai", "openrouter")
+        """
         return GetContentTgUseCase(
             gateway=TelegramGateway(),
-            nlp_processor=NLPProcessor(),
+            nlp_processor=NLPProcessorFactory.create_nlp_processor(
+                provider_name=ai_provider
+            ),
             content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
     @staticmethod
-    def get_kuda_go_content_usecase() -> GetContentKudaGoUseCase:
+    def get_kuda_go_content_usecase(
+        ai_provider: str = "openrouter",
+    ) -> GetContentKudaGoUseCase:
+        """
+        Создает use case для KudaGo с выбранным AI провайдером.
+
+        Args:
+            ai_provider: Имя AI провайдера ("thebai", "openrouter")
+        """
         return GetContentKudaGoUseCase(
             gateway=KudaGoGateway(),
-            nlp_processor=NLPProcessor(),
+            nlp_processor=NLPProcessorFactory.create_nlp_processor(
+                provider_name=ai_provider
+            ),
             content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
     @staticmethod
-    def get_timepad_content_usecase() -> GetContentTimepadUseCase:
+    def get_timepad_content_usecase(
+        ai_provider: str = "openrouter",
+    ) -> GetContentTimepadUseCase:
+        """
+        Создает use case для Timepad с выбранным AI провайдером.
+
+        Args:
+            ai_provider: Имя AI провайдера ("thebai", "openrouter")
+        """
         return GetContentTimepadUseCase(
             gateway=TimepadGateway(),
-            nlp_processor=NLPProcessor(),
+            nlp_processor=NLPProcessorFactory.create_nlp_processor(
+                provider_name=ai_provider
+            ),
             content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
     @staticmethod
-    def get_vk_content_usecase() -> GetContentVkUseCase:
+    def get_vk_content_usecase(ai_provider: str = "openrouter") -> GetContentVkUseCase:
+        """
+        Создает use case для VK с выбранным AI провайдером.
+
+        Args:
+            ai_provider: Имя AI провайдера ("thebai", "openrouter")
+        """
         return GetContentVkUseCase(
             gateway=ParsingVK(),
-            nlp_processor=NLPProcessor(),
+            nlp_processor=NLPProcessorFactory.create_nlp_processor(
+                provider_name=ai_provider
+            ),
             content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )
 
     @staticmethod
-    def get_place_content_usecase() -> GetPlacesUsecase:
+    def get_place_content_usecase(ai_provider: str = "openrouter") -> GetPlacesUsecase:
+        """
+        Создает use case для Places с выбранным AI провайдером.
+
+        Args:
+            ai_provider: Имя AI провайдера ("thebai", "openrouter")
+        """
         return GetPlacesUsecase(
             gateway=ParsingVK(),
-            nlp_processor=NLPProcessor(),
+            nlp_processor=NLPProcessorFactory.create_nlp_processor(
+                provider_name=ai_provider
+            ),
             content_repo=DjangoContentRepository(),
             file_repo=FileRepositoryProtocol(),
         )

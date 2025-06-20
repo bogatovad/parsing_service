@@ -1,14 +1,14 @@
-from datetime import datetime
-import json
-import requests
-import yaml
 import logging
-import os
-from pathlib import Path
-import time
+from typing import Dict, Any, List
 
 from interface_adapters.gateways.npl_base_gateway.base_nlp_processor import (
     NLPProcessorBase,
+)
+from interface_adapters.gateways.ai_provider_base.ai_provider_interface import (
+    AIProviderInterface,
+)
+from interface_adapters.gateways.prompt_processor_base.prompt_processor_interface import (
+    PromptProcessorInterface,
 )
 
 logger = logging.getLogger("nlp_processor")
@@ -16,157 +16,59 @@ logger = logging.getLogger("nlp_processor")
 
 class NLPProcessor(NLPProcessorBase):
     """
-    Класс, отвечающий за вызов LLM (theb.ai / openrouter),
-    формирование промптов и разбор ответа в список событий.
+    Рефакторированный класс для обработки NLP задач.
+    Использует dependency injection для работы с различными провайдерами AI.
     """
 
-    def __init__(self, prompt_file: str = "nlp_prompts.yaml") -> None:
-        self.thebai_api_url = os.getenv(
-            "THEBAI_API_URL", "https://api.theb.ai/v1/chat/completions"
-        )
-        self.thebai_api_key = "sk-te5U1TN6yvTYFuB8Nc8FVGhlQi5BSQL7dkdAaPePqRXNf7Wu"
-        self.openrouter_api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.openrouter_api_key = (
-            "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"
-        )
-        self.attempt_interval = 60
-        self.max_retries = 3
+    def __init__(
+        self,
+        ai_provider: AIProviderInterface,
+        prompt_processor: PromptProcessorInterface,
+    ) -> None:
+        """
+        Инициализирует NLPProcessor с переданными провайдерами.
 
-        # Определяем путь к файлу относительно корня проекта
-        project_root = (
-            Path(__file__).resolve().parents[4]
-        )  # 4 уровня вверх до корня проекта
-        prompt_file_path = project_root / prompt_file
-
-        with open(prompt_file_path, "r", encoding="utf-8") as f:
-            self.prompt_config = yaml.safe_load(f)
+        Args:
+            ai_provider: Провайдер AI сервиса
+            prompt_processor: Обработчик промптов
+        """
+        self.ai_provider = ai_provider
+        self.prompt_processor = prompt_processor
 
         logger.debug(
-            "NLPProcessor инициализирован. Промпты загружены из: %s", prompt_file_path
+            f"NLPProcessor инициализирован с провайдером: {self.ai_provider.get_provider_name()}"
         )
 
-    def _parse_response(self, response_text: str) -> list:
-        logger.debug("Парсим ответ нейросети: %s", response_text)
-
-        if not response_text:
-            return []
-
-        if response_text.strip() == "[НЕ АФИША]":
-            logger.debug("Ответ: [НЕ АФИША]. Вернём пустой список.")
-            return []
-
-        try:
-            parsed = json.loads(response_text)
-
-            if isinstance(parsed, list):
-                return parsed
-            elif isinstance(parsed, dict):
-                return [parsed]
-            else:
-                logger.debug("Ответ не list и не dict.")
-                return []
-        except Exception as e:
-            logger.error(f"Ошибка парсинга ответа: {e}")
-            return []
-
-    def _send_request(self, url, api_key, model, prompt):
-        logger.debug("Отправляем запрос к API: %s, модель=%s", url, model)
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-        }
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-        max_retries = 3
-        timeout = 30
-        retry_delay = 5
-
-        for attempt in range(max_retries):
-            try:
-                resp = requests.post(
-                    url, headers=headers, json=payload, timeout=timeout
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                choices = data.get("choices", [])
-
-                if not choices:
-                    logger.warning("API вернул пустые choices.")
-                    return ""
-
-                content = choices[0]["message"]["content"]
-                logger.debug("Ответ API получен успешно")
-                return content
-            except requests.Timeout:
-                logger.error(f"Ответ от модели {resp.json()}")
-                logger.warning(
-                    f"Таймаут при запросе к API (попытка {attempt + 1}/{max_retries})"
-                )
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    continue
-            except requests.RequestException as e:
-                logger.error(f"Ответ от модели {resp.json()}")
-                logger.error(f"Ошибка при запросе к API: {e}")
-
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    continue
-
-                break
-
-        logger.error("Все попытки запроса к API завершились неудачно")
-        return ""
-
-    def _call_api(self, prompt: str, service: str = "openrouter") -> str:
-        """
-        Унифицированный метод запроса:
-        service == 'thebai' => theb.ai
-        иначе openrouter.
-        """
-        if service == "thebai":
-            url, api_key, model = self.thebai_api_url, self.thebai_api_key, "theb-ai-4"
-        else:
-            url, api_key, model = (
-                self.openrouter_api_url,
-                self.openrouter_api_key,
-                "openai/gpt-3.5-turbo",
-            )
-
-        return self._send_request(url, api_key, model, prompt)
-
-    def process(self, text: str) -> list:
+    def process(self, text: str) -> List[Dict[str, Any]]:
         """
         Главный метод: формирует промпт из main_prompt,
-        вызывает _call_api, парсит JSON-ответ.
+        вызывает AI провайдер, парсит JSON-ответ.
         Возвращает список словарей, каждый описывает событие.
         """
-        main_prompt = self.prompt_config.get("main_prompt", "")
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        weekday_map = [
-            "Понедельник",
-            "Вторник",
-            "Среда",
-            "Четверг",
-            "Пятница",
-            "Суббота",
-            "Воскресенье",
-        ]
-        current_day = weekday_map[datetime.now().weekday()]
-        prompt = (
-            main_prompt.replace("{text}", text)
-            .replace("{current_date}", current_date)
-            .replace("{current_day}", current_day)
-        )
-        raw_response = self._call_api(prompt, service="openrouter")
-        parsed_list = self._parse_response(raw_response)
+        if not self.ai_provider.is_available():
+            logger.error(
+                f"AI провайдер {self.ai_provider.get_provider_name()} недоступен"
+            )
+            return []
+
+        main_prompt_template = self.prompt_processor.get_prompt_template("main_prompt")
+        if not main_prompt_template:
+            logger.error("Не найден шаблон main_prompt")
+            return []
+
+        context = self.prompt_processor.get_current_context()
+        context["text"] = text
+
+        prompt = self.prompt_processor.format_prompt(main_prompt_template, context)
+
+        logger.debug(f"Отправляем запрос к {self.ai_provider.get_provider_name()}")
+        raw_response = self.ai_provider.send_request(prompt)
+
+        parsed_list = self.prompt_processor.parse_response(raw_response)
         logger.debug("Результат парсинга: %s объектов", len(parsed_list))
         return parsed_list
 
-    def process_post(self, post: dict) -> list:
+    def process_post(self, post: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Обрабатывает отдельный пост, выделяя text + image.
         Возвращает список событий (каждый – dict).
@@ -198,29 +100,56 @@ class NLPProcessor(NLPProcessorBase):
     ) -> str:
         """
         Определяет категорию мероприятия.
-        Сначала пытается использовать API, если не получается - использует локальные правила.
+        Сначала пытается использовать API, если не получается - возвращает пустую строку.
         """
-        try:
-            # Пробуем через API
-            category_prompt_template = self.prompt_config.get(
-                service, "Определи категорию: {text}"
+        if not self.ai_provider.is_available():
+            logger.warning(
+                f"AI провайдер {self.ai_provider.get_provider_name()} недоступен"
             )
-            prompt = category_prompt_template.format(text=event_text)
-            result = self._call_api(prompt, service="openrouter")
+            return ""
+
+        try:
+            category_prompt_template = self.prompt_processor.get_prompt_template(
+                service
+            )
+            if not category_prompt_template:
+                logger.warning(f"Не найден шаблон промпта: {service}")
+                return ""
+
+            context = {"text": event_text}
+            prompt = self.prompt_processor.format_prompt(
+                category_prompt_template, context
+            )
+
+            result = self.ai_provider.send_request(prompt)
             if result and result.strip():
                 return result.strip()
         except Exception as e:
             logger.warning(f"Ошибка при определении категории через API: {str(e)}")
 
+        return ""
+
     def generate_link_title(self, event_text: str) -> str:
         """
         Генерирует название для ссылки.
-        Использует шаблон link_title_prompt из YAML.
+        Использует шаблон link_title_prompt.
         Возвращает сгенерированное название как строку.
         """
-        link_prompt_template = self.prompt_config.get(
-            "link_title_prompt", "Придумай название для ссылки: {text}"
+        if not self.ai_provider.is_available():
+            logger.warning(
+                f"AI провайдер {self.ai_provider.get_provider_name()} недоступен"
+            )
+            return ""
+
+        link_prompt_template = self.prompt_processor.get_prompt_template(
+            "link_title_prompt"
         )
-        prompt = link_prompt_template.format(text=event_text)
-        result = self._call_api(prompt, service="openrouter")
-        return result
+        if not link_prompt_template:
+            logger.warning("Не найден шаблон link_title_prompt")
+            return ""
+
+        context = {"text": event_text}
+        prompt = self.prompt_processor.format_prompt(link_prompt_template, context)
+
+        result = self.ai_provider.send_request(prompt)
+        return result if result else ""
