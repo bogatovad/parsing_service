@@ -24,6 +24,10 @@ class TelegramGateway(BaseGateway):
             "TfLF6xlbpsq2tJE3vELUyvxKBXbsR4lM8wihAcnoqrRT0Q="
         )
         self.channels = [
+            ("@af_nn800", "nn"),
+            ("@afishann", "nn"),
+            ("@dvig_nn_afisha", "nn"),
+            ("@visitnizhny", "nn"),
             ("@opera_nn", "nn"),
             ("@moynizhny", "nn"),
             ("@molodezh_no", "nn"),
@@ -43,6 +47,19 @@ class TelegramGateway(BaseGateway):
             ("@Events_nn_best", "nn"),
             ("@nnevents_best", "nn"),
             ("@naukann", "nn"),
+            ("@mishakudago", "nn"),
+            ("@z_kvartaly", "nn"),
+            ("@ano_asiris", "nn"),
+            ("@pushkinmuseum_volga", "nn"),
+            ("@matveeva_juli", "nn"),
+            ("@arsenalmolod", "nn"),
+            ("@terminal_nn", "nn"),
+            ("@parnik_parnik", "nn"),
+            ("@gorky_tech", "nn"),
+            ("@go_moskva", "msk"),
+            ("@free_moskva", "msk"),
+            ("@mosafishka", "msk"),
+            ("@moscowafishi", "msk"),
         ]
 
         self.client = TelegramClient(
@@ -118,7 +135,7 @@ class TelegramGateway(BaseGateway):
         """
         events = []
         logger.debug(f"Получаем сообщения из канала: {channel}, город: {city}")
-        messages = self.client.get_messages(channel, limit=15)
+        messages = self.client.get_messages(channel, limit=40)
         logger.debug(
             "Из канала %s получено сообщений: %s", channel, len(messages), messages
         )

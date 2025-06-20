@@ -69,7 +69,7 @@ class EventParser:
 
     def parse_event(self, event):
         details = self.api_client.get_event_details(event["id"])
-        # details = self.api_client.get_event_details(209952)
+
         # получить место
         if details["place"] == None:  # noqa: E711
             text = details.get("body_text")

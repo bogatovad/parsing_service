@@ -408,7 +408,7 @@ class ParsingVK(BaseGateway):
             List[Dict[str, Any]]: Список обработанных постов
         """
         try:
-            self.parsing(amount=100)
+            self.parsing(amount=200)
             self.filter_content()
 
             result = [
