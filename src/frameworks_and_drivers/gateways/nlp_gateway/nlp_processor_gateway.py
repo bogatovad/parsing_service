@@ -133,7 +133,7 @@ class NLPProcessor(NLPProcessorBase):
             url, api_key, model = (
                 self.openrouter_api_url,
                 self.openrouter_api_key,
-                "mistralai/mistral-7b-instruct",
+                "openai/gpt-3.5-turbo",
             )
 
         return self._send_request(url, api_key, model, prompt)
