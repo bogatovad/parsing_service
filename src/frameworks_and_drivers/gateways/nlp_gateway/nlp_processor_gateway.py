@@ -27,7 +27,7 @@ class NLPProcessor(NLPProcessorBase):
         self.thebai_api_key = "sk-te5U1TN6yvTYFuB8Nc8FVGhlQi5BSQL7dkdAaPePqRXNf7Wu"
         self.openrouter_api_url = "https://openrouter.ai/api/v1/chat/completions"
         self.openrouter_api_key = (
-            "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"
+            "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"
         )
         self.attempt_interval = 60
         self.max_retries = 3
