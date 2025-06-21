@@ -17,15 +17,15 @@ fi
 
 # Сборка образов
 echo "🔨 Сборка Docker образов..."
-docker-compose build
+docker compose build
 
 # Инициализация расписания
 echo "📅 Инициализация расписания задач..."
-docker-compose --profile init up schedule-init
+docker compose --profile init up schedule-init
 
 # Запуск основных сервисов
 echo "🎯 Запуск Celery сервисов..."
-docker-compose up -d celery-worker-parsing celery-beat-parsing
+docker compose up -d celery-worker-parsing celery-beat-parsing
 
 echo ""
 echo "✅ Развертывание завершено успешно!"
