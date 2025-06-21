@@ -1,6 +1,5 @@
 import logging
 from celery import shared_task, chain
-from datetime import timedelta
 from django.utils import timezone
 from django.db.models import F, Q
 from interface_adapters.controlles.content_controller import (
@@ -138,23 +137,24 @@ def delete_outdated_events(self):
 
         # Используем текущую дату в UTC
         today = timezone.now().date()
-        yesterday = today - timedelta(days=1)
 
-        logger.info(f"Deleting events before or on {yesterday} (UTC). Today is {today}")
+        logger.info(
+            f"Deleting events that ended before {today} (UTC). Today is {today}"
+        )
 
         # 1. События с указанными датами начала и окончания (многодневные, которые уже завершились)
         multi_day_events = Content.objects.filter(
             Q(date_start__isnull=False)
             & Q(date_end__isnull=False)
             & ~Q(date_start=F("date_end"))  # Исключаем однодневные события
-            & Q(date_end__lte=yesterday)  # Изменено с __lt на __lte (включительно)
+            & Q(date_end__lt=today)  # Удаляем события, закончившиеся ДО сегодня
         )
 
         # 2. Однодневные события без даты окончания
         single_day_no_end = Content.objects.filter(
             Q(date_start__isnull=False)
             & Q(date_end__isnull=True)
-            & Q(date_start__lte=yesterday)  # Изменено с __lt на __lte (включительно)
+            & Q(date_start__lt=today)  # Удаляем события, которые начались ДО сегодня
         )
 
         # 3. Однодневные события с одинаковыми датами начала и окончания
@@ -162,7 +162,7 @@ def delete_outdated_events(self):
             Q(date_start__isnull=False)
             & Q(date_end__isnull=False)
             & Q(date_start=F("date_end"))
-            & Q(date_start__lte=yesterday)  # Изменено с __lt на __lte (включительно)
+            & Q(date_start__lt=today)  # Удаляем события, которые были ДО сегодня
         )
 
         # Логируем каждый тип событий отдельно
