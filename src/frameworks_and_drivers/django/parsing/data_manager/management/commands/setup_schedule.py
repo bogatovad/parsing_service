@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from frameworks_and_drivers.django.parsing.celery_tasks import (
+from frameworks_and_drivers.django.parsing.tasks import (
     setup_all_schedules,
 )
 import logging
@@ -41,7 +41,7 @@ class Command(BaseCommand):
                     )
                 )
             elif only == "parsers":
-                from frameworks_and_drivers.django.parsing.celery_tasks import (
+                from frameworks_and_drivers.django.parsing.tasks import (
                     setup_main_parsers_schedule,
                 )
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
                     self.style.SUCCESS("✅ Расписание парсеров настроено!")
                 )
             elif only == "cleanup":
-                from frameworks_and_drivers.django.parsing.celery_tasks import (
+                from frameworks_and_drivers.django.parsing.tasks import (
                     setup_cleanup_schedule,
                 )
 
