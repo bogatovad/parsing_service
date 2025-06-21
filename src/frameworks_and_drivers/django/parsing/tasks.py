@@ -315,10 +315,11 @@ def setup_main_parsers_schedule():
             name__in=["Main Parsers Morning Run", "Main Parsers Evening Run"]
         ).delete()
 
-        # Создаем или получаем расписание для утреннего запуска (5:00 UTC = 8:00 MSK)
+        # Создаем или получаем расписание для утреннего запуска (8:00 MSK)
         daily_schedule, _ = CrontabSchedule.objects.get_or_create(
-            hour=5,
+            hour=8,
             minute=0,
+            timezone="Europe/Moscow",
             defaults={
                 "day_of_week": "*",
                 "day_of_month": "*",
@@ -334,7 +335,7 @@ def setup_main_parsers_schedule():
                 "crontab": daily_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 5:00 UTC (8:00 MSK) - простая версия",
+                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 8:00 MSK - простая версия",
             },
         )
 
@@ -535,10 +536,11 @@ def setup_notifications_schedule():
     try:
         logger.info("Setting up schedule for notifications task")
 
-        # Создаем или получаем расписание для утренних уведомлений (6:00 UTC = 9:00 MSK)
+        # Создаем или получаем расписание для утренних уведомлений (9:00 MSK)
         notifications_schedule, _ = CrontabSchedule.objects.get_or_create(
-            hour=6,
+            hour=9,
             minute=0,
+            timezone="Europe/Moscow",
             defaults={
                 "day_of_week": "*",
                 "day_of_month": "*",
@@ -554,7 +556,7 @@ def setup_notifications_schedule():
                 "crontab": notifications_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Ежедневная отправка уведомлений об избранных событиях в 6:00 UTC (9:00 MSK)",
+                "description": "Ежедневная отправка уведомлений об избранных событиях в 9:00 MSK",
             },
         )
 
