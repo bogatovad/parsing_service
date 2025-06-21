@@ -305,7 +305,7 @@ def setup_cleanup_schedule():
 def setup_main_parsers_schedule():
     """
     Настраивает расписание запуска основных парсеров (KudaGo, Timepad, Telegram, VK)
-    один раз в день утром в 6:00 UTC (9:00 MSK)
+    один раз в день утром в 5:00 UTC (8:00 MSK)
     """
     try:
         logger.info("Setting up schedule for main parsers")
@@ -315,9 +315,9 @@ def setup_main_parsers_schedule():
             name__in=["Main Parsers Morning Run", "Main Parsers Evening Run"]
         ).delete()
 
-        # Создаем или получаем расписание для утреннего запуска (6:00 UTC = 9:00 MSK)
+        # Создаем или получаем расписание для утреннего запуска (5:00 UTC = 8:00 MSK)
         daily_schedule, _ = CrontabSchedule.objects.get_or_create(
-            hour=6,
+            hour=5,
             minute=0,
             defaults={
                 "day_of_week": "*",
@@ -334,7 +334,7 @@ def setup_main_parsers_schedule():
                 "crontab": daily_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 6:00 UTC (9:00 MSK) - простая версия",
+                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 5:00 UTC (8:00 MSK) - простая версия",
             },
         )
 
