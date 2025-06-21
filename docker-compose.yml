@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+  # Сервис для инициализации расписания (запускается один раз)
+  schedule-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash /app/scripts/init_schedules.sh
+    volumes:
+      - .:/app
+    env_file:
+      - environments/db.env
+      - environments/web.env
+      - environments/minio.env
+    restart: "no"  # Запускается только один раз
+    profiles:
+      - init  # Запускается только при профиле 'init'
+
   celery-worker-parsing:
     build:
       context: .
@@ -12,6 +28,7 @@ services:
       - environments/db.env
       - environments/web.env
       - environments/minio.env
+    restart: unless-stopped
 
   celery-beat-parsing:
     build:
@@ -24,6 +41,7 @@ services:
       - environments/db.env
       - environments/web.env
       - environments/minio.env
+    restart: unless-stopped
 
   # flower:
   #   image: mher/flower

@@ -56,6 +56,7 @@ class TelegramGateway(BaseGateway):
             ("@terminal_nn", "nn"),
             ("@parnik_parnik", "nn"),
             ("@gorky_tech", "nn"),
+            ("@meetingwithmeaning", "nn"),
             ("@go_moskva", "msk"),
             ("@free_moskva", "msk"),
             ("@mosafishka", "msk"),

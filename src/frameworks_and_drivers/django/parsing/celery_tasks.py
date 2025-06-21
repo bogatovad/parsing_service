@@ -134,14 +134,14 @@ def run_main_parsers():
 def setup_cleanup_schedule():
     """
     Настраивает расписание для очистки старых мероприятий
-    Запускается ежедневно в 20:00 UTC (23:00 по московскому времени) для очистки истекших событий
+    Запускается ежедневно в 21:00 UTC (00:00 по московскому времени) для очистки истекших событий
     """
     try:
         logger.info("Setting up schedule for cleanup task")
 
-        # Создаем или получаем расписание для вечерней очистки (20:00 UTC = 23:00 MSK)
+        # Создаем или получаем расписание для ночной очистки (21:00 UTC = 00:00 MSK)
         cleanup_schedule, _ = CrontabSchedule.objects.get_or_create(
-            hour=20,
+            hour=21,
             minute=0,
             defaults={
                 "day_of_week": "*",
@@ -158,7 +158,7 @@ def setup_cleanup_schedule():
                 "crontab": cleanup_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Ежедневная очистка устаревших мероприятий в 20:00 UTC (23:00 MSK)",
+                "description": "Ежедневная очистка устаревших мероприятий в 21:00 UTC (00:00 MSK)",
             },
         )
 
@@ -173,13 +173,18 @@ def setup_cleanup_schedule():
 def setup_main_parsers_schedule():
     """
     Настраивает расписание запуска основных парсеров (KudaGo, Timepad, Telegram, VK)
-    дважды в день: утром в 6:00 UTC (9:00 MSK) и вечером в 16:00 UTC (19:00 MSK)
+    один раз в день утром в 6:00 UTC (9:00 MSK)
     """
     try:
         logger.info("Setting up schedule for main parsers")
 
+        # Удаляем старые задачи если они существуют
+        PeriodicTask.objects.filter(
+            name__in=["Main Parsers Morning Run", "Main Parsers Evening Run"]
+        ).delete()
+
         # Создаем или получаем расписание для утреннего запуска (6:00 UTC = 9:00 MSK)
-        morning_schedule, _ = CrontabSchedule.objects.get_or_create(
+        daily_schedule, _ = CrontabSchedule.objects.get_or_create(
             hour=6,
             minute=0,
             defaults={
@@ -189,42 +194,19 @@ def setup_main_parsers_schedule():
             },
         )
 
-        # Создаем или получаем расписание для вечернего запуска (16:00 UTC = 19:00 MSK)
-        evening_schedule, _ = CrontabSchedule.objects.get_or_create(
-            hour=16,
-            minute=0,
-            defaults={
-                "day_of_week": "*",
-                "day_of_month": "*",
-                "month_of_year": "*",
-            },
-        )
-
-        # Создаем или обновляем задачу для утреннего запуска
+        # Создаем или обновляем задачу для ежедневного запуска
         PeriodicTask.objects.update_or_create(
-            name="Main Parsers Morning Run",
+            name="Main Parsers Daily Run",
             defaults={
                 "task": "run_main_parsers",
-                "crontab": morning_schedule,
+                "crontab": daily_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Запуск основных парсеров (KudaGo, Timepad, Telegram, VK) каждое утро в 6:00 UTC (9:00 MSK)",
+                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 6:00 UTC (9:00 MSK)",
             },
         )
 
-        # Создаем или обновляем задачу для вечернего запуска
-        PeriodicTask.objects.update_or_create(
-            name="Main Parsers Evening Run",
-            defaults={
-                "task": "run_main_parsers",
-                "crontab": evening_schedule,
-                "enabled": True,
-                "kwargs": json.dumps({}),
-                "description": "Запуск основных парсеров (KudaGo, Timepad, Telegram, VK) каждый вечер в 16:00 UTC (19:00 MSK)",
-            },
-        )
-
-        logger.info("Successfully set up schedule for main parsers")
+        logger.info("Successfully set up daily schedule for main parsers")
         return True
 
     except Exception as e:
