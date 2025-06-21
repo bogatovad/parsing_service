@@ -358,9 +358,9 @@ def send_event_notifications():
 
         # Настройки для Telegram
         class TelegramSettings(BaseSettings):
-            BOT_TOKEN: str
-            API_ID: str
-            API_HASH: str
+            BOT_TOKEN: str = "7517129777:AAHtVmXMsaa130ebt5HyPFgkWoYRWJgfZt4"
+            API_ID: str = "18640708"
+            API_HASH: str = "202b12968ca21dbf7c7049bb657f81d1"
             model_config = SettingsConfigDict()
 
         try:
