@@ -2,13 +2,9 @@
 Django management команда для ручного запуска парсеров
 """
 
+import logging
 from django.core.management.base import BaseCommand
 from frameworks_and_drivers.django.parsing.celery_tasks import (
-    parse_kudago,
-    parse_timepad,
-    parse_telegram,
-    parse_vk,
-    parse_places,
     run_main_parsers,
     run_all_parsers,
 )
@@ -17,108 +13,104 @@ from interface_adapters.controlles.content_controller import (
     GetContentTgController,
     GetContentKudaGoController,
     GetContentVKController,
-    PlacesController,
 )
 from interface_adapters.controlles.factory import UseCaseFactory
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Запускает парсеры вручную для тестирования"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Инициализируем контроллеры для прямого запуска
-        self.factory_usecase = UseCaseFactory()
-        self.controllers = {
-            "kudago": GetContentKudaGoController(usecase_factory=self.factory_usecase),
-            "timepad": GetContentTimepadController(
-                usecase_factory=self.factory_usecase
-            ),
-            "telegram": GetContentTgController(usecase_factory=self.factory_usecase),
-            "vk": GetContentVKController(usecase_factory=self.factory_usecase),
-            "places": PlacesController(usecase_factory=self.factory_usecase),
-        }
+    help = "Run content parsers"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "parsers",
-            nargs="*",
-            choices=["kudago", "timepad", "telegram", "vk", "places", "main", "all"],
-            help="Какие парсеры запустить (по умолчанию: main)",
+            "--parser",
+            type=str,
+            choices=["kudago", "timepad", "telegram", "vk", "all"],
+            default="all",
+            help="Which parser to run (default: all)",
         )
         parser.add_argument(
-            "--async",
+            "--dry-run",
             action="store_true",
-            help="Запустить асинхронно через Celery (по умолчанию: синхронно)",
+            help="Show what parsers would run without actually running them",
         )
 
     def handle(self, *args, **options):
-        parsers = options["parsers"] or ["main"]
-        is_async = options["async"]
+        parser_name = options["parser"]
+        dry_run = options["dry_run"]
 
-        self.stdout.write(
-            self.style.SUCCESS(f"🚀 Запускаем парсеры: {', '.join(parsers)}")
-        )
+        # Создаем фабрику и контроллеры
+        factory_usecase = UseCaseFactory()
 
-        if is_async:
-            self.stdout.write("⚡ Режим: асинхронный (через Celery)")
+        parsers = {
+            "kudago": (
+                "KudaGo",
+                GetContentKudaGoController(usecase_factory=factory_usecase),
+            ),
+            "timepad": (
+                "Timepad",
+                GetContentTimepadController(usecase_factory=factory_usecase),
+            ),
+            "telegram": (
+                "Telegram",
+                GetContentTgController(usecase_factory=factory_usecase),
+            ),
+            "vk": ("VK", GetContentVKController(usecase_factory=factory_usecase)),
+        }
+
+        if parser_name == "all":
+            selected_parsers = parsers.items()
         else:
-            self.stdout.write("🔄 Режим: синхронный (ожидание результата)")
+            selected_parsers = [(parser_name, parsers[parser_name])]
 
-        self.stdout.write("-" * 50)
+        self.stdout.write("🚀 Starting parsers execution")
 
-        for parser_name in parsers:
+        if dry_run:
+            self.stdout.write(self.style.WARNING("🔍 DRY RUN MODE"))
+            for parser_key, (parser_display_name, _) in selected_parsers:
+                self.stdout.write(f"  Would run: {parser_display_name}")
+            return
+
+        results = []
+
+        for parser_key, (parser_display_name, controller) in selected_parsers:
             try:
-                self.stdout.write(f"\n📦 Запускаем {parser_name}...")
-
-                if parser_name == "kudago":
-                    result = self._run_parser(
-                        "kudago", parse_kudago, is_async, "KudaGo"
+                self.stdout.write(f"▶️  Starting {parser_display_name} parser...")
+                controller.get_content()
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"✅ {parser_display_name} parser completed successfully"
                     )
-                elif parser_name == "timepad":
-                    result = self._run_parser(
-                        "timepad", parse_timepad, is_async, "Timepad"
-                    )
-                elif parser_name == "telegram":
-                    result = self._run_parser(
-                        "telegram", parse_telegram, is_async, "Telegram"
-                    )
-                elif parser_name == "vk":
-                    result = self._run_parser("vk", parse_vk, is_async, "VK")
-                elif parser_name == "places":
-                    result = self._run_parser(
-                        "places", parse_places, is_async, "Places"
-                    )
-                elif parser_name == "main":
-                    result = self._run_main_parsers(is_async)
-                elif parser_name == "all":
-                    result = self._run_all_parsers(is_async)
-
-                if is_async and hasattr(result, "id"):
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"✅ {parser_name} запущен асинхронно. Task ID: {result.id}"
-                        )
-                    )
+                )
+                results.append({"parser": parser_display_name, "status": "success"})
+                logger.info(f"{parser_display_name} parser finished successfully")
 
             except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"❌ Ошибка при запуске {parser_name}: {str(e)}")
+                error_msg = f"❌ Error in {parser_display_name} parser: {str(e)}"
+                self.stdout.write(self.style.ERROR(error_msg))
+                results.append(
+                    {"parser": parser_display_name, "status": "error", "error": str(e)}
                 )
-                logger.error(
-                    f"Error running parser {parser_name}: {str(e)}", exc_info=True
-                )
+                logger.error(f"Error in {parser_display_name} parser: {str(e)}")
 
-        self.stdout.write("\n" + "=" * 50)
-        self.stdout.write(self.style.SUCCESS("🎉 Запуск парсеров завершен!"))
+        # Итоговый отчет
+        successful = len([r for r in results if r["status"] == "success"])
+        failed = len([r for r in results if r["status"] == "error"])
 
-        if not is_async:
-            self.stdout.write(
-                "\n💡 Совет: используйте --async для асинхронного запуска через Celery"
-            )
+        self.stdout.write("\n📊 Execution Summary:")
+        self.stdout.write(f"  ✅ Successful: {successful}")
+        self.stdout.write(f"  ❌ Failed: {failed}")
+
+        if failed > 0:
+            self.stdout.write("\n🔍 Failed parsers:")
+            for result in results:
+                if result["status"] == "error":
+                    self.stdout.write(f"  - {result['parser']}: {result['error']}")
+
+        logger.info(
+            f"Parsers execution completed: {successful} successful, {failed} failed"
+        )
 
     def _run_parser(self, parser_key, celery_func, is_async, display_name):
         """Запускает парсер синхронно или асинхронно"""
