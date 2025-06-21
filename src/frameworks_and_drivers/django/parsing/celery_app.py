@@ -13,4 +13,4 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # Явно указываем пакеты для поиска задач
 app.autodiscover_tasks(["frameworks_and_drivers.django.parsing"])
 
-# Импортируем задачи
+# Импортируем задачи явно
