@@ -75,6 +75,22 @@ class TelegramGateway(BaseGateway):
             ("@moscowsee1", "msk"),
             ("@dvevmoskve", "msk"),
             ("@kudago", "msk"),
+            ("@spbafisha", "spb"),
+            ("@kudagospb", "spb"),
+            ("@Sankt_Peterburg24", "spb"),
+            ("@gopeterburg", "spb"),
+            ("@spbfree24", "spb"),
+            ("@tripsoup", "spb"),
+            ("@freepeterburg", "spb"),
+            ("@gopeterburg", "spb"),
+            ("@uniteclub", "spb"),
+            ("@infopeterburg", "spb"),
+            ("@DavaiSNami", "spb"),
+            ("@pitercalling", "spb"),
+            ("@spbdo500", "spb"),
+            ("@gotoeatspb", "spb"),
+            ("@coffee_i_paradnaya", "spb"),
+            ("@goeat_spb", "spb"),
         ]
 
         self.client = TelegramClient(
