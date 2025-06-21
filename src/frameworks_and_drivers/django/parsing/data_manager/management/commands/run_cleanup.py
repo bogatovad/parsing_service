@@ -24,20 +24,26 @@ class Command(BaseCommand):
             self.stdout.write("🧹 Starting deletion of outdated events")
             self.stdout.write(f"⏰ Task execution time: {timezone.now()}")
 
-            # Используем текущую дату в UTC
-            today = timezone.now().date()
+            # Используем текущую дату в московском времени
+            moscow_tz = timezone.get_current_timezone()
+            moscow_now = timezone.now().astimezone(moscow_tz)
+            today = moscow_now.date()
 
             self.stdout.write(
-                f"📅 Deleting events that ended before {today} (UTC). Today is {today}"
+                f"📅 Deleting events that ended before {today} (Moscow time). Today is {today}"
             )
-            self.stdout.write(f"🌍 Current timezone: {timezone.get_current_timezone()}")
+            self.stdout.write(f"🌍 Current timezone: {moscow_tz}")
+            self.stdout.write(f"⏰ Moscow time: {moscow_now}")
+            self.stdout.write(f"⏰ UTC time: {timezone.now()}")
 
             # 1. События с указанными датами начала и окончания (многодневные, которые уже завершились)
             multi_day_events = Content.objects.filter(
                 Q(date_start__isnull=False)
                 & Q(date_end__isnull=False)
                 & ~Q(date_start=F("date_end"))  # Исключаем однодневные события
-                & Q(date_end__lt=today)  # Удаляем события, закончившиеся ДО сегодня
+                & Q(
+                    date_end__lt=today
+                )  # Удаляем многодневные события, закончившиеся ДО сегодня
             )
 
             # 2. Однодневные события без даты окончания
@@ -46,15 +52,17 @@ class Command(BaseCommand):
                 & Q(date_end__isnull=True)
                 & Q(
                     date_start__lt=today
-                )  # Удаляем события, которые начались ДО сегодня
+                )  # Удаляем однодневные события, которые начались ДО сегодня
             )
 
-            # 3. Однодневные события с одинаковыми датами начала и окончания
+            # 3. Однодневные события с одинаковыми датами начала и окончания (вчерашние и более старые)
             single_day_same_dates = Content.objects.filter(
                 Q(date_start__isnull=False)
                 & Q(date_end__isnull=False)
                 & Q(date_start=F("date_end"))
-                & Q(date_start__lt=today)  # Удаляем события, которые были ДО сегодня
+                & Q(
+                    date_start__lt=today
+                )  # Удаляем однодневные события, которые были ДО сегодня (включая вчера)
             )
 
             # Получаем списки для логирования
