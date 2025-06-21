@@ -10,7 +10,6 @@ from interface_adapters.controlles.content_controller import (
 )
 from interface_adapters.controlles.factory import UseCaseFactory
 from django_celery_beat.models import PeriodicTask, CrontabSchedule
-from frameworks_and_drivers.django.parsing.tasks import delete_outdated_events
 import json
 
 logger = logging.getLogger(__name__)
@@ -253,5 +252,5 @@ PARSER_TASKS = {
     "all": run_all_parsers,
     "main": run_main_parsers,
     "setup_schedules": setup_all_schedules,  # Добавляем задачу настройки расписания
-    "cleanup": delete_outdated_events,  # Добавляем задачу очистки для ручного запуска
+    # cleanup задача теперь только в tasks.py
 }
