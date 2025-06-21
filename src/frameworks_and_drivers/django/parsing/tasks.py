@@ -332,9 +332,237 @@ def setup_all_schedules():
     try:
         logger.info("Setting up all schedules")
         setup_main_parsers_schedule()
-        setup_cleanup_schedule()  # Добавляем настройку расписания очистки
+        setup_cleanup_schedule()
+        setup_notifications_schedule()  # Добавляем настройку расписания уведомлений
         logger.info("Successfully set up all schedules")
         return True
     except Exception as e:
         logger.error(f"Error setting up schedules: {str(e)}")
         return False
+
+
+@shared_task(name="send_event_notifications")
+def send_event_notifications():
+    """
+    Отправка уведомлений пользователям об их избранных событиях на сегодня.
+    Включает как однодневные события, начинающиеся сегодня, так и многодневные события, активные сегодня.
+    """
+    logger.info("Starting event notifications task")
+
+    try:
+        # Импорты для работы с основным проектом
+        import requests
+        from pyrogram import Client
+        from pyrogram.raw.functions.contacts import ResolveUsername
+        from pydantic_settings import BaseSettings, SettingsConfigDict
+
+        # Настройки для Telegram
+        class TelegramSettings(BaseSettings):
+            BOT_TOKEN: str
+            API_ID: str
+            API_HASH: str
+            model_config = SettingsConfigDict()
+
+        try:
+            settings = TelegramSettings()
+        except Exception as e:
+            logger.error(f"Ошибка загрузки настроек Telegram: {e}")
+            return {"status": "error", "message": "Настройки Telegram не найдены"}
+
+        # Создаем клиент Pyrogram
+        pyrogram_client = Client(
+            "notification_bot",
+            api_id=settings.API_ID,
+            api_hash=settings.API_HASH,
+            bot_token=settings.BOT_TOKEN,
+            app_version="7.7.2",
+            device_model="Lenovo Z6 Lite",
+            system_version="11 R",
+        )
+
+        def resolve_username_to_user_id(username: str) -> int | None:
+            with pyrogram_client:
+                try:
+                    r = pyrogram_client.invoke(ResolveUsername(username=username))
+                    if r.users:
+                        return r.users[0].id
+                    return None
+                except Exception as e:
+                    logger.warning(f"Ошибка получения ID для {username}: {e}")
+                    return None
+
+        def send_telegram_message(chat_id: int, message: str) -> bool:
+            """Отправка сообщения через Telegram HTTP API"""
+            try:
+                url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
+                payload = {
+                    "chat_id": chat_id,
+                    "text": message,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": False,
+                }
+                response = requests.post(url, json=payload)
+                return response.status_code == 200
+            except Exception as e:
+                logger.error(f"Ошибка отправки сообщения: {e}")
+                return False
+
+        def format_event_dates(event) -> str:
+            """Форматирование дат события"""
+            if not event.date_end or event.date_start == event.date_end:
+                return f"📅 {event.date_start.strftime('%d.%m.%Y')}"
+            return f"📅 {event.date_start.strftime('%d.%m.%Y')} - {event.date_end.strftime('%d.%m.%Y')}"
+
+        # Получаем сегодняшнюю дату
+        today = timezone.now().date()
+        logger.info(f"Поиск событий на {today}")
+
+        # Импортируем модели основного проекта
+        try:
+            import sys
+            import os
+
+            # Добавляем путь к основному проекту если нужно
+            main_project_path = "/app"  # Путь к основному проекту в контейнере
+            if main_project_path not in sys.path:
+                sys.path.append(main_project_path)
+
+            # Настраиваем Django для основного проекта
+            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "event_afisha.settings")
+            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
+            import django
+
+            django.setup()
+
+            from event.models import Like
+
+        except ImportError as e:
+            logger.error(f"Ошибка импорта моделей основного проекта: {e}")
+            return {"status": "error", "message": "Модели основного проекта недоступны"}
+
+        # Получаем лайки на события сегодня
+        today_likes = Like.objects.select_related("user", "content").filter(
+            Q(
+                # Однодневные события или события без даты окончания
+                Q(content__date_end__isnull=True) & Q(content__date_start=today)
+            )
+            | Q(
+                # Многодневные события
+                Q(content__date_start__lte=today) & Q(content__date_end__gte=today)
+            ),
+            value=True,  # Только положительные лайки (избранное)
+        )
+
+        logger.info(f"Найдено {today_likes.count()} избранных событий на сегодня")
+
+        # Группируем события по пользователям
+        user_events = {}
+        for like in today_likes:
+            if like.user not in user_events:
+                user_events[like.user] = []
+            user_events[like.user].append(like.content)
+
+        # Отправляем уведомления каждому пользователю
+        sent_count = 0
+        error_count = 0
+
+        for user, events in user_events.items():
+            try:
+                # Получаем Telegram ID пользователя
+                telegram_id = resolve_username_to_user_id(user.username)
+                if not telegram_id:
+                    logger.warning(
+                        f"Не удалось получить Telegram ID для {user.username}"
+                    )
+                    error_count += 1
+                    continue
+
+                # Формируем текст сообщения
+                message = (
+                    "🎉 Привет! У вас сегодня актуальны следующие мероприятия:\n\n"
+                )
+
+                for event in events:
+                    message += f"<b>{event.name}</b>\n"
+                    message += f"{format_event_dates(event)}\n"
+
+                    if event.time:
+                        message += f"⏰ Время: {event.time}\n"
+                    if event.location:
+                        message += f"📍 Место: {event.location}\n"
+
+                    # Добавляем ссылку на событие
+                    event_link = (
+                        f"https://t.me/EventAfishaBot/strelka?startapp={event.id}"
+                    )
+                    message += f"🔗 <a href='{event_link}'>Открыть в приложении</a>\n\n"
+
+                # Отправляем сообщение
+                if send_telegram_message(telegram_id, message):
+                    logger.info(f"Уведомление отправлено пользователю {user.username}")
+                    sent_count += 1
+                else:
+                    logger.error(
+                        f"Не удалось отправить уведомление пользователю {user.username}"
+                    )
+                    error_count += 1
+
+            except Exception as e:
+                logger.error(f"Ошибка обработки пользователя {user.username}: {e}")
+                error_count += 1
+                continue
+
+        result = {
+            "status": "success",
+            "sent_notifications": sent_count,
+            "errors": error_count,
+            "total_users": len(user_events),
+            "total_events": sum(len(events) for events in user_events.values()),
+        }
+
+        logger.info(f"Задача уведомлений завершена: {result}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Ошибка в задаче уведомлений: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+def setup_notifications_schedule():
+    """
+    Настраивает расписание для отправки ежедневных уведомлений
+    Запускается ежедневно в 6:00 UTC (9:00 MSK) одновременно с парсерами
+    """
+    try:
+        logger.info("Setting up schedule for notifications task")
+
+        # Создаем или получаем расписание для утренних уведомлений (6:00 UTC = 9:00 MSK)
+        notifications_schedule, _ = CrontabSchedule.objects.get_or_create(
+            hour=6,
+            minute=0,
+            defaults={
+                "day_of_week": "*",
+                "day_of_month": "*",
+                "month_of_year": "*",
+            },
+        )
+
+        # Создаем или обновляем задачу для уведомлений
+        PeriodicTask.objects.update_or_create(
+            name="Daily Event Notifications",
+            defaults={
+                "task": "send_event_notifications",
+                "crontab": notifications_schedule,
+                "enabled": True,
+                "kwargs": json.dumps({}),
+                "description": "Ежедневная отправка уведомлений об избранных событиях в 6:00 UTC (9:00 MSK)",
+            },
+        )
+
+        logger.info("Successfully set up schedule for notifications task")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error setting up notifications schedule: {str(e)}")
+        raise
