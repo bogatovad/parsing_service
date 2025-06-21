@@ -129,6 +129,35 @@ def run_main_parsers():
     return result
 
 
+@shared_task(name="run_main_parsers_simple")
+def run_main_parsers_simple():
+    """
+    Простой последовательный запуск основных парсеров без chain
+    """
+    logger.info("Starting simple sequential execution of main parsers")
+
+    results = []
+    parsers = [
+        ("KudaGo", parse_kudago),
+        ("Timepad", parse_timepad),
+        ("Telegram", parse_telegram),
+        ("VK", parse_vk),
+    ]
+
+    for parser_name, parser_func in parsers:
+        try:
+            logger.info(f"Starting {parser_name} parser...")
+            result = parser_func()
+            results.append({parser_name: result})
+            logger.info(f"{parser_name} parser completed with result: {result}")
+        except Exception as e:
+            logger.error(f"Error in {parser_name} parser: {str(e)}")
+            results.append({parser_name: f"ERROR: {str(e)}"})
+
+    logger.info("All main parsers completed")
+    return results
+
+
 @shared_task(
     bind=True, max_retries=3, name="delete_outdated_events", ignore_result=False
 )
