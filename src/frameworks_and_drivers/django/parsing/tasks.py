@@ -132,8 +132,16 @@ def run_main_parsers():
 @shared_task(bind=True, max_retries=3, name="delete_outdated_events")
 def delete_outdated_events(self):
     """Task to delete old events based on date conditions."""
+    # Принудительная перезагрузка для избежания кэширования
+    import importlib
+    import sys
+
+    if __name__ in sys.modules:
+        importlib.reload(sys.modules[__name__])
+
     try:
         logger.info("Starting deletion of outdated events")
+        logger.info(f"Task execution time: {timezone.now()}")
 
         # Используем текущую дату в UTC
         today = timezone.now().date()
@@ -141,6 +149,7 @@ def delete_outdated_events(self):
         logger.info(
             f"Deleting events that ended before {today} (UTC). Today is {today}"
         )
+        logger.info(f"Current timezone: {timezone.get_current_timezone()}")
 
         # 1. События с указанными датами начала и окончания (многодневные, которые уже завершились)
         multi_day_events = Content.objects.filter(
@@ -191,6 +200,7 @@ def delete_outdated_events(self):
         deleted_count, details = all_events.delete()
 
         logger.info(f"Successfully deleted {deleted_count} events with outdated dates")
+        logger.info(f"Deletion details: {details}")
         return {
             "status": "success",
             "deleted_count": deleted_count,
