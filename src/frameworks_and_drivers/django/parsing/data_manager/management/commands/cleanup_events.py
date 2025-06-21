@@ -3,7 +3,6 @@ Django management команда для ручной очистки старых
 """
 
 from django.core.management.base import BaseCommand
-from frameworks_and_drivers.django.parsing.celery_tasks import delete_outdated_events
 from frameworks_and_drivers.django.parsing.data_manager.models import Content
 from django.utils import timezone
 from datetime import timedelta
@@ -25,7 +24,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--async",
             action="store_true",
-            help="Запустить асинхронно через Celery (по умолчанию: синхронно)",
+            help="Режим async больше не используется - всегда синхронное выполнение",
         )
         parser.add_argument(
             "--days",
@@ -47,10 +46,15 @@ class Command(BaseCommand):
 
         if dry_run:
             self.stdout.write("🔍 Режим: DRY RUN (только показать, не удалять)")
-        elif is_async:
-            self.stdout.write("⚡ Режим: асинхронный (через Celery)")
         else:
-            self.stdout.write("🔄 Режим: синхронный (ожидание результата)")
+            self.stdout.write("🔄 Режим: синхронный (прямое выполнение)")
+
+        if is_async:
+            self.stdout.write(
+                self.style.WARNING(
+                    "⚠️ Async режим больше не используется - выполняется синхронно"
+                )
+            )
 
         self.stdout.write(f"📅 Порог: мероприятия старше {days_threshold} дней")
         self.stdout.write("-" * 50)
@@ -67,30 +71,19 @@ class Command(BaseCommand):
             return
 
         try:
-            if is_async:
-                self.stdout.write("\n⚡ Запускаем очистку асинхронно...")
-                result = delete_outdated_events.delay()
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"✅ Очистка запущена асинхронно. Task ID: {result.id}"
-                    )
-                )
-                self.stdout.write("📊 Проверьте логи Celery для результатов")
-            else:
-                self.stdout.write("\n🔄 Запускаем очистку синхронно...")
-                result = delete_outdated_events()
+            self.stdout.write("\n🔄 Запускаем очистку...")
+            result = self._delete_outdated_events()
 
-                if result:
-                    self.stdout.write(
-                        self.style.SUCCESS("✅ Очистка завершена успешно")
-                    )
-                    # Показать статистику после очистки
-                    self.stdout.write("\n📊 Статистика после очистки:")
-                    self._show_current_stats()
-                else:
-                    self.stdout.write(
-                        self.style.ERROR("❌ Очистка завершена с ошибками")
-                    )
+            if result and result.get("status") == "success":
+                self.stdout.write(self.style.SUCCESS("✅ Очистка завершена успешно"))
+                deleted_count = result.get("deleted_count", 0)
+                self.stdout.write(f"🗑️ Удалено событий: {deleted_count}")
+
+                # Показать статистику после очистки
+                self.stdout.write("\n📊 Статистика после очистки:")
+                self._show_current_stats()
+            else:
+                self.stdout.write(self.style.ERROR("❌ Очистка завершена с ошибками"))
 
         except Exception as e:
             self.stdout.write(
@@ -100,6 +93,91 @@ class Command(BaseCommand):
 
         self.stdout.write("\n" + "=" * 50)
         self.stdout.write(self.style.SUCCESS("🎉 Команда очистки завершена!"))
+
+    def _delete_outdated_events(self):
+        """Функция очистки устаревших событий (перенесена из Celery задачи)"""
+        try:
+            logger.info("Starting deletion of outdated events")
+            logger.info(f"Task execution time: {timezone.now()}")
+
+            # Используем текущую дату в UTC
+            today = timezone.now().date()
+
+            logger.info(
+                f"Deleting events that ended before {today} (UTC). Today is {today}"
+            )
+            logger.info(f"Current timezone: {timezone.get_current_timezone()}")
+
+            # 1. События с указанными датами начала и окончания (многодневные, которые уже завершились)
+            multi_day_events = Content.objects.filter(
+                Q(date_start__isnull=False)
+                & Q(date_end__isnull=False)
+                & ~Q(date_start=F("date_end"))  # Исключаем однодневные события
+                & Q(date_end__lt=today)  # Удаляем события, закончившиеся ДО сегодня
+            )
+
+            # 2. Однодневные события без даты окончания
+            single_day_no_end = Content.objects.filter(
+                Q(date_start__isnull=False)
+                & Q(date_end__isnull=True)
+                & Q(
+                    date_start__lt=today
+                )  # Удаляем события, которые начались ДО сегодня
+            )
+
+            # 3. Однодневные события с одинаковыми датами начала и окончания
+            single_day_same_dates = Content.objects.filter(
+                Q(date_start__isnull=False)
+                & Q(date_end__isnull=False)
+                & Q(date_start=F("date_end"))
+                & Q(date_start__lt=today)  # Удаляем события, которые были ДО сегодня
+            )
+
+            # Логируем каждый тип событий отдельно
+            multi_day_list = list(
+                multi_day_events.values("id", "name", "date_start", "date_end")
+            )
+            single_no_end_list = list(
+                single_day_no_end.values("id", "name", "date_start")
+            )
+            single_same_dates_list = list(
+                single_day_same_dates.values("id", "name", "date_start", "date_end")
+            )
+
+            logger.info(
+                f"Found {len(multi_day_list)} multi-day events to delete: {multi_day_list}"
+            )
+            logger.info(
+                f"Found {len(single_no_end_list)} single-day events (no end date) to delete: {single_no_end_list}"
+            )
+            logger.info(
+                f"Found {len(single_same_dates_list)} single-day events (same dates) to delete: {single_same_dates_list}"
+            )
+
+            # Объединяем все запросы
+            all_events = multi_day_events | single_day_no_end | single_day_same_dates
+
+            # Удаляем события
+            deleted_count, details = all_events.delete()
+
+            logger.info(
+                f"Successfully deleted {deleted_count} events with outdated dates"
+            )
+            logger.info(f"Deletion details: {details}")
+
+            return {
+                "status": "success",
+                "deleted_count": deleted_count,
+                "details": {
+                    "multi_day_events": len(multi_day_list),
+                    "single_day_no_end": len(single_no_end_list),
+                    "single_day_same_dates": len(single_same_dates_list),
+                },
+            }
+
+        except Exception as exc:
+            logger.error(f"Error in delete_outdated_events: {exc}", exc_info=True)
+            return {"status": "error", "message": str(exc)}
 
     def _show_stats(self, days_threshold):
         """Показывает статистику мероприятий перед очисткой (точно как в delete_outdated_events)"""
