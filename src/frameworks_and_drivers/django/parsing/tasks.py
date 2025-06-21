@@ -123,7 +123,7 @@ def run_main_parsers():
     )
 
     # Запускаем цепочку
-    result = parser_chain()
+    result = parser_chain.apply_async()
 
     logger.info("Main parsers chain has been started")
     return result
