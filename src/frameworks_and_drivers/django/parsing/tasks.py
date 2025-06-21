@@ -129,16 +129,11 @@ def run_main_parsers():
     return result
 
 
-@shared_task(bind=True, max_retries=3, name="delete_outdated_events")
-def delete_outdated_events(self):
+@shared_task(
+    bind=True, max_retries=3, name="delete_outdated_events", ignore_result=False
+)
+def delete_outdated_events(self=None):
     """Task to delete old events based on date conditions."""
-    # Принудительная перезагрузка для избежания кэширования
-    import importlib
-    import sys
-
-    if __name__ in sys.modules:
-        importlib.reload(sys.modules[__name__])
-
     try:
         logger.info("Starting deletion of outdated events")
         logger.info(f"Task execution time: {timezone.now()}")
@@ -213,7 +208,10 @@ def delete_outdated_events(self):
 
     except Exception as exc:
         logger.error(f"Error in delete_outdated_events: {exc}", exc_info=True)
-        self.retry(exc=exc, countdown=3600)
+        if self:  # Проверяем, что self существует (вызов через Celery)
+            self.retry(exc=exc, countdown=3600)
+        else:  # Прямой вызов
+            raise
 
 
 def setup_cleanup_schedule():
