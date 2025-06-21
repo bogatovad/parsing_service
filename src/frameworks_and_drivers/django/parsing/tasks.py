@@ -435,7 +435,7 @@ def send_event_notifications():
 
             django.setup()
 
-            from event.models import Like
+            from frameworks_and_drivers.django.parsing.data_manager.models import Like
 
         except ImportError as e:
             logger.error(f"Ошибка импорта моделей основного проекта: {e}")
