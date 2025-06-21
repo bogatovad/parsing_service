@@ -198,11 +198,11 @@ def setup_main_parsers_schedule():
         PeriodicTask.objects.update_or_create(
             name="Main Parsers Daily Run",
             defaults={
-                "task": "run_main_parsers",
+                "task": "run_main_parsers_simple",
                 "crontab": daily_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 6:00 UTC (9:00 MSK)",
+                "description": "Ежедневный запуск основных парсеров (KudaGo → Timepad → Telegram → VK) в 6:00 UTC (9:00 MSK) - простая версия",
             },
         )
 
