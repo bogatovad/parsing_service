@@ -4,10 +4,10 @@
 # Запускается через cron
 
 # Путь к проекту
-PROJECT_DIR="/root/parsing_service"
+PROJECT_DIR="/home/admin/parsing_service"
 
 # Логирование
-LOG_FILE="/var/log/parsing_service_cleanup.log"
+LOG_FILE="/home/admin/parsing_service_cleanup.log"
 
 # Функция логирования
 log() {
@@ -24,7 +24,7 @@ cd "$PROJECT_DIR" || {
 
 # Запускаем очистку через Docker
 log "Running cleanup command..."
-docker compose exec -T django python /app/src/frameworks_and_drivers/django/parsing/manage.py run_cleanup >> "$LOG_FILE" 2>&1
+docker compose exec -T celery-worker-parsing python /app/src/frameworks_and_drivers/django/parsing/manage.py run_cleanup >> "$LOG_FILE" 2>&1
 
 if [ $? -eq 0 ]; then
     log "SUCCESS: Cleanup completed successfully"
