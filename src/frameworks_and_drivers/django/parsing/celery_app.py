@@ -10,8 +10,5 @@ app = Celery("parsing_service")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Автодискавери задач из Django приложений
+# Автодискавери задач из Django приложений - Celery автоматически найдет tasks.py
 app.autodiscover_tasks()
-
-# Также убедимся что задачи зарегистрированы
-app.autodiscover_tasks(["frameworks_and_drivers.django.parsing"])
