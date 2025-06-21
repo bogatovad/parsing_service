@@ -248,7 +248,7 @@ def test_parser(parser_name: str):
 
 
 @app.task(name="delete_outdated_events", bind=True, max_retries=3)
-def delete_outdated_events(self=None):
+def delete_outdated_events(self):
     """Task to delete old events based on date conditions."""
     try:
         logger.info("Starting deletion of outdated events")
@@ -324,10 +324,7 @@ def delete_outdated_events(self=None):
 
     except Exception as exc:
         logger.error(f"Error in delete_outdated_events: {exc}", exc_info=True)
-        if self:  # Проверяем, что self существует (вызов через Celery)
-            self.retry(exc=exc, countdown=3600)
-        else:  # Прямой вызов
-            raise
+        self.retry(exc=exc, countdown=3600)
 
 
 # Обновляем словарь доступных задач
