@@ -271,10 +271,11 @@ def setup_cleanup_schedule():
     try:
         logger.info("Setting up schedule for cleanup task")
 
-        # Создаем или получаем расписание для ночной очистки (21:00 UTC = 00:00 MSK)
+        # Создаем или получаем расписание для ночной очистки (21:18 MSK)
         cleanup_schedule, _ = CrontabSchedule.objects.get_or_create(
             hour=21,
-            minute=0,
+            minute=18,
+            timezone="Europe/Moscow",
             defaults={
                 "day_of_week": "*",
                 "day_of_month": "*",
@@ -290,7 +291,7 @@ def setup_cleanup_schedule():
                 "crontab": cleanup_schedule,
                 "enabled": True,
                 "kwargs": json.dumps({}),
-                "description": "Ежедневная очистка устаревших мероприятий в 21:00 UTC (00:00 MSK)",
+                "description": "Ежедневная очистка устаревших мероприятий в 21:18 MSK",
             },
         )
 

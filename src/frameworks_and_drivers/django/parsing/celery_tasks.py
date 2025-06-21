@@ -1,8 +1,5 @@
 import logging
-from celery import chain, shared_task
-from datetime import timedelta
-from django.utils import timezone
-from django.db.models import F, Q
+from celery import chain
 from frameworks_and_drivers.django.parsing.celery_app import app
 from interface_adapters.controlles.content_controller import (
     GetContentTimepadController,
@@ -12,9 +9,11 @@ from interface_adapters.controlles.content_controller import (
     PlacesController,
 )
 from interface_adapters.controlles.factory import UseCaseFactory
-from frameworks_and_drivers.django.parsing.data_manager.models import Content
 from django_celery_beat.models import PeriodicTask, CrontabSchedule
 import json
+
+# Импортируем задачу очистки из tasks.py
+from .tasks import delete_outdated_events
 
 logger = logging.getLogger(__name__)
 
@@ -246,80 +245,7 @@ def test_parser(parser_name: str):
     return task.delay()
 
 
-@shared_task(bind=True, max_retries=3)
-def delete_outdated_events(self):
-    """Task to delete old events based on date conditions."""
-    try:
-        logger.info("Starting deletion of outdated events")
-
-        # Используем текущую дату в UTC
-        today = timezone.now().date()
-        yesterday = today - timedelta(days=1)
-
-        logger.info(f"Deleting events before or on {yesterday} (UTC). Today is {today}")
-
-        # 1. События с указанными датами начала и окончания (многодневные, которые уже завершились)
-        multi_day_events = Content.objects.filter(
-            Q(date_start__isnull=False)
-            & Q(date_end__isnull=False)
-            & ~Q(date_start=F("date_end"))  # Исключаем однодневные события
-            & Q(date_end__lte=yesterday)  # Изменено с __lt на __lte (включительно)
-        )
-
-        # 2. Однодневные события без даты окончания
-        single_day_no_end = Content.objects.filter(
-            Q(date_start__isnull=False)
-            & Q(date_end__isnull=True)
-            & Q(date_start__lte=yesterday)  # Изменено с __lt на __lte (включительно)
-        )
-
-        # 3. Однодневные события с одинаковыми датами начала и окончания
-        single_day_same_dates = Content.objects.filter(
-            Q(date_start__isnull=False)
-            & Q(date_end__isnull=False)
-            & Q(date_start=F("date_end"))
-            & Q(date_start__lte=yesterday)  # Изменено с __lt на __lte (включительно)
-        )
-
-        # Логируем каждый тип событий отдельно
-        multi_day_list = list(
-            multi_day_events.values("id", "name", "date_start", "date_end")
-        )
-        single_no_end_list = list(single_day_no_end.values("id", "name", "date_start"))
-        single_same_dates_list = list(
-            single_day_same_dates.values("id", "name", "date_start", "date_end")
-        )
-
-        logger.info(
-            f"Found {len(multi_day_list)} multi-day events to delete: {multi_day_list}"
-        )
-        logger.info(
-            f"Found {len(single_no_end_list)} single-day events (no end date) to delete: {single_no_end_list}"
-        )
-        logger.info(
-            f"Found {len(single_same_dates_list)} single-day events (same dates) to delete: {single_same_dates_list}"
-        )
-
-        # Объединяем все запросы
-        all_events = multi_day_events | single_day_no_end | single_day_same_dates
-
-        # Удаляем события
-        deleted_count, details = all_events.delete()
-
-        logger.info(f"Successfully deleted {deleted_count} events with outdated dates")
-        return {
-            "status": "success",
-            "deleted_count": deleted_count,
-            "details": {
-                "multi_day_events": len(multi_day_list),
-                "single_day_no_end": len(single_no_end_list),
-                "single_day_same_dates": len(single_same_dates_list),
-            },
-        }
-
-    except Exception as exc:
-        logger.error(f"Error in delete_outdated_events: {exc}", exc_info=True)
-        self.retry(exc=exc, countdown=3600)
+# delete_outdated_events теперь определена в tasks.py
 
 
 # Обновляем словарь доступных задач
