@@ -13,6 +13,12 @@ from interface_adapters.controlles.factory import UseCaseFactory
 from frameworks_and_drivers.django.parsing.data_manager.models import Content
 from django_celery_beat.models import PeriodicTask, CrontabSchedule
 import json
+import requests
+from pyrogram import Client
+from pyrogram.raw.functions.contacts import ResolveUsername
+from pydantic_settings import BaseSettings, SettingsConfigDict
+import sys
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +29,20 @@ controller_tg = GetContentTgController(usecase_factory=factory_usecase)
 controller_kuda_go = GetContentKudaGoController(usecase_factory=factory_usecase)
 controller_vk = GetContentVKController(usecase_factory=factory_usecase)
 controller_place = PlacesController(usecase_factory=factory_usecase)
+
+
+# Настройки для Telegram
+class TelegramSettings(BaseSettings):
+    BOT_TOKEN: str = "7517129777:AAHtVmXMsaa130ebt5HyPFgkWoYRWJgfZt4"
+    API_ID: str = "18640708"
+    API_HASH: str = "202b12968ca21dbf7c7049bb657f81d1"
+    model_config = SettingsConfigDict()
+
+
+try:
+    settings = TelegramSettings()
+except Exception as e:
+    logger.error(f"Ошибка загрузки настроек Telegram: {e}")
 
 
 @shared_task(name="parse_telegram")
@@ -350,25 +370,6 @@ def send_event_notifications():
     logger.info("Starting event notifications task")
 
     try:
-        # Импорты для работы с основным проектом
-        import requests
-        from pyrogram import Client
-        from pyrogram.raw.functions.contacts import ResolveUsername
-        from pydantic_settings import BaseSettings, SettingsConfigDict
-
-        # Настройки для Telegram
-        class TelegramSettings(BaseSettings):
-            BOT_TOKEN: str = "7517129777:AAHtVmXMsaa130ebt5HyPFgkWoYRWJgfZt4"
-            API_ID: str = "18640708"
-            API_HASH: str = "202b12968ca21dbf7c7049bb657f81d1"
-            model_config = SettingsConfigDict()
-
-        try:
-            settings = TelegramSettings()
-        except Exception as e:
-            logger.error(f"Ошибка загрузки настроек Telegram: {e}")
-            return {"status": "error", "message": "Настройки Telegram не найдены"}
-
         # Создаем клиент Pyrogram
         pyrogram_client = Client(
             "notification_bot",
@@ -419,9 +420,6 @@ def send_event_notifications():
 
         # Импортируем модели основного проекта
         try:
-            import sys
-            import os
-
             # Добавляем путь к основному проекту если нужно
             main_project_path = "/app"  # Путь к основному проекту в контейнере
             if main_project_path not in sys.path:
